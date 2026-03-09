@@ -58,12 +58,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     let _ = tokio::join!(handle1, handle2);
                 }
                 "--traffic" => {
-                    handle1 = tokio::spawn(ac::commands::ws_traffic(mihomo_clone, tx));
+                    handle1 = tokio::spawn(ac::ws_traffic(mihomo_clone, tx));
 
                     handle2 = tokio::spawn(async move {
                         println!(">>> Starting... >>>");
                         while let Some(msg) = rx.recv().await {
-                            println!("Kernel traffic information: {}", msg);
+                            println!("Kernel traffic information: {:?}", msg);
                         }
                         println!("<<< Ending... <<<");
                     });
