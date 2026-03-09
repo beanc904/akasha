@@ -1,7 +1,9 @@
 [package]
+author = [ "Coffee Bean <beanc904@gmail.com>" ]
 name = "akasha"
 version = "0.1.0"
 edition = "2024"
+license = "GPL-3.0-or-later"
 
 [dependencies]
 color-eyre = "0.6.3"
