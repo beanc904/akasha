@@ -1,6 +1,6 @@
 use ratatui::prelude::*;
-use ratatui::widgets::{Axis, Chart, Dataset};
-use ratatui::widgets::{Block, Borders, Paragraph};
+use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph};
+use ratatui::widgets::{Chart, Dataset};
 
 use crate::app::App;
 
@@ -27,14 +27,14 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
     // ANCHOR: setup layout
     let layout_root = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints(vec![Constraint::Percentage(20), Constraint::Percentage(80)])
+        .constraints(vec![Constraint::Length(20), Constraint::Min(0)])
         .split(frame.area());
     let layout_sidebar = Layout::default()
         .direction(Direction::Vertical)
         .constraints(vec![
-            Constraint::Percentage(10),
+            Constraint::Length(3),
             Constraint::Percentage(60),
-            Constraint::Percentage(30),
+            Constraint::Percentage(40),
         ])
         .split(layout_root[0]);
     // ANCHOR_END: setup layout
@@ -46,27 +46,42 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
             .style(Style::default().fg(Color::Cyan))
             .data(app.data.make_contiguous()),
     ];
-    let chart_traffic_monitor = Chart::new(datasets)
-        .block(
-            Block::default()
-                .title("Mihomo Traffic Monitor")
-                .borders(Borders::ALL),
+    let chart_traffic_monitor = Chart::new(datasets).block(
+        Block::default()
+            .title("Traffic Monitor")
+            .borders(Borders::ALL),
+    );
+    // .x_axis(
+    //     Axis::default()
+    //         .title("time")
+    //         .bounds([app.tick - 120f64, app.tick])
+    //         .labels([
+    //             format!("{:.0}", app.tick - 120.0).bold(),
+    //             format!("{:.0}", app.tick - 60.0).into(),
+    //             format!("{:.0}", app.tick).into(),
+    //         ]),
+    // )
+    // .y_axis(Axis::default().title("KB/s").bounds([0.0, 500.0]).labels([
+    //     "0".bold(),
+    //     "250".into(),
+    //     "500".into(),
+    // ]));
+
+    let sidebar_items: Vec<ListItem> = app
+        .sidebar_items
+        .iter()
+        .map(|i| ListItem::new(*i).style(Style::default().fg(Color::White)))
+        .collect();
+
+    let sidebar = List::new(sidebar_items)
+        .block(Block::default().title(" Menu ").borders(Borders::ALL))
+        .highlight_style(
+            Style::default()
+                .bg(Color::White)
+                .fg(Color::DarkGray)
+                .add_modifier(Modifier::BOLD),
         )
-        .x_axis(
-            Axis::default()
-                .title("time")
-                .bounds([app.tick - 120f64, app.tick])
-                .labels([
-                    format!("{:.0}", app.tick - 120.0).bold(),
-                    format!("{:.0}", app.tick - 60.0).into(),
-                    format!("{:.0}", app.tick).into(),
-                ]),
-        )
-        .y_axis(Axis::default().title("KB/s").bounds([0.0, 500.0]).labels([
-            "0".bold(),
-            "250".into(),
-            "500".into(),
-        ]));
+        .highlight_symbol(">> ");
 
     frame.render_widget(
         Paragraph::new("Left").block(Block::new().borders(Borders::ALL)),
@@ -80,9 +95,7 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
         Paragraph::new("Akasha v0.0.1").block(Block::new().borders(Borders::ALL)),
         layout_sidebar[0],
     );
-    frame.render_widget(
-        Paragraph::new("Up").block(Block::new().borders(Borders::ALL).title("Sidebar")),
-        layout_sidebar[1],
-    );
+    // frame.render_widget(sidebar, layout_sidebar[1]);
+    frame.render_stateful_widget(sidebar, layout_sidebar[1], &mut app.sidebar_state);
     frame.render_widget(chart_traffic_monitor, layout_sidebar[2]);
 }
