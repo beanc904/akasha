@@ -92,7 +92,12 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
         layout_root[1],
     );
     frame.render_widget(
-        Paragraph::new("Akasha v0.0.1").block(Block::new().borders(Borders::ALL)),
+        Paragraph::new(format!(
+            "{} v{}",
+            app.pkginfo.get_name().to_uppercase(),
+            app.pkginfo.get_version()
+        ))
+        .block(Block::new().borders(Borders::ALL)),
         layout_sidebar[0],
     );
     // frame.render_widget(sidebar, layout_sidebar[1]);

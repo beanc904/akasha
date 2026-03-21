@@ -11,12 +11,16 @@ use tokio::time::{Duration, interval};
 
 use akasha::client as ac;
 
+use crate::pkginfo::PkgInfo;
+
 // #[derive(Debug, Default)]
 pub struct App {
     /// Is the application running?
     pub running: bool,
     // Event stream.
     pub event_stream: EventStream,
+    // Package informations.
+    pub pkginfo: PkgInfo,
     // Mihomo handle.
     pub mihomo: Arc<RwLock<ac::mihomo::Mihomo>>,
     // Sidebar selective status.
@@ -32,12 +36,12 @@ pub struct App {
 impl App {
     /// Construct a new instance of [`App`].
     pub fn new() -> Self {
-        // Self::default()
         let mut liststate = ListState::default();
         liststate.select(Some(0));
         App {
             running: true,
             event_stream: EventStream::default(),
+            pkginfo: PkgInfo::new(),
             mihomo: ac::Builder::new()
                 .protocol(ac::Protocol::LocalSocket)
                 .socket_path("/tmp/mihomo.sock".to_string())
@@ -99,7 +103,7 @@ impl App {
     pub async fn run(mut self, mut terminal: DefaultTerminal) -> color_eyre::Result<()> {
         self.running = true;
         // Renderint interval
-        let mut ticker = interval(Duration::from_millis(50));
+        let mut ticker = interval(Duration::from_millis(1000 / 24));
 
         // ANCHOR: chart demo
         let (tx, mut rx) = mpsc::channel::<Value>(64);
@@ -169,8 +173,8 @@ impl App {
         match (key.modifiers, key.code) {
             (_, KeyCode::Esc | KeyCode::Char('q'))
             | (KeyModifiers::CONTROL, KeyCode::Char('c') | KeyCode::Char('C')) => self.quit(),
-            (_, KeyCode::Down | KeyCode::Char('j')) => self.sidebar_next(),
-            (_, KeyCode::Up | KeyCode::Char('k')) => self.sidebar_previous(),
+            (_, KeyCode::Tab) => self.sidebar_next(),
+            (_, KeyCode::BackTab) => self.sidebar_previous(),
             // Add other key handlers here.
             _ => {}
         }
