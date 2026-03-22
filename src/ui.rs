@@ -1,8 +1,8 @@
 use ratatui::prelude::*;
+use ratatui::widgets::{Axis, Chart, Dataset};
 use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph};
-use ratatui::widgets::{Chart, Dataset};
 
-use crate::app::App;
+use crate::app::{App, CurrentPage};
 
 /// Renders the user interface.
 ///
@@ -27,7 +27,7 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
     // ANCHOR: setup layout
     let layout_root = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints(vec![Constraint::Length(20), Constraint::Min(0)])
+        .constraints(vec![Constraint::Length(25), Constraint::Min(0)])
         .split(frame.area());
     let layout_sidebar = Layout::default()
         .direction(Direction::Vertical)
@@ -46,26 +46,27 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
             .style(Style::default().fg(Color::Cyan))
             .data(app.data.make_contiguous()),
     ];
-    let chart_traffic_monitor = Chart::new(datasets).block(
-        Block::default()
-            .title("Traffic Monitor")
-            .borders(Borders::ALL),
-    );
-    // .x_axis(
-    //     Axis::default()
-    //         .title("time")
-    //         .bounds([app.tick - 120f64, app.tick])
-    //         .labels([
-    //             format!("{:.0}", app.tick - 120.0).bold(),
-    //             format!("{:.0}", app.tick - 60.0).into(),
-    //             format!("{:.0}", app.tick).into(),
-    //         ]),
-    // )
-    // .y_axis(Axis::default().title("KB/s").bounds([0.0, 500.0]).labels([
-    //     "0".bold(),
-    //     "250".into(),
-    //     "500".into(),
-    // ]));
+    let chart_traffic_monitor = Chart::new(datasets)
+        .block(
+            Block::default()
+                .title(" Traffic Monitor ")
+                .borders(Borders::ALL),
+        )
+        .x_axis(
+            Axis::default()
+                .title("T")
+                .bounds([app.tick - 60f64, app.tick])
+                .labels([
+                    format!("{:.0}", app.tick - 60.0).bold(),
+                    format!("{:.0}", app.tick - 30.0).into(),
+                    format!("{:.0}", app.tick).into(),
+                ]),
+        )
+        .y_axis(Axis::default().title("KB/s").bounds([0.0, 2000.0]).labels([
+            "0".bold(),
+            "1k".into(),
+            "2k".into(),
+        ]));
 
     let sidebar_items: Vec<ListItem> = app
         .sidebar_items
@@ -87,10 +88,64 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
         Paragraph::new("Left").block(Block::new().borders(Borders::ALL)),
         layout_root[0],
     );
-    frame.render_widget(
-        Paragraph::new("Right").block(Block::new().borders(Borders::ALL)),
-        layout_root[1],
-    );
+    match app.current_page {
+        CurrentPage::Home => {
+            frame.render_widget(
+                Paragraph::new("Now it is selecting home.")
+                    .block(Block::new().borders(Borders::ALL)),
+                layout_root[1],
+            );
+        }
+        CurrentPage::Proxies => {
+            frame.render_widget(
+                Paragraph::new("Now it is selecting proxies.")
+                    .block(Block::new().borders(Borders::ALL)),
+                layout_root[1],
+            );
+        }
+        CurrentPage::Profiles => {
+            frame.render_widget(
+                Paragraph::new("Now it is selecting profiles.")
+                    .block(Block::new().borders(Borders::ALL)),
+                layout_root[1],
+            );
+        }
+        CurrentPage::Connections => {
+            frame.render_widget(
+                Paragraph::new("Now it is selecting connections.")
+                    .block(Block::new().borders(Borders::ALL)),
+                layout_root[1],
+            );
+        }
+        CurrentPage::Rules => {
+            frame.render_widget(
+                Paragraph::new("Now it is selecting rules.")
+                    .block(Block::new().borders(Borders::ALL)),
+                layout_root[1],
+            );
+        }
+        CurrentPage::Logs => {
+            frame.render_widget(
+                Paragraph::new("Now it is selecting logs.")
+                    .block(Block::new().borders(Borders::ALL)),
+                layout_root[1],
+            );
+        }
+        CurrentPage::Test => {
+            frame.render_widget(
+                Paragraph::new("Now it is selecting test.")
+                    .block(Block::new().borders(Borders::ALL)),
+                layout_root[1],
+            );
+        }
+        CurrentPage::Settings => {
+            frame.render_widget(
+                Paragraph::new("Now it is selecting settings.")
+                    .block(Block::new().borders(Borders::ALL)),
+                layout_root[1],
+            );
+        }
+    }
     frame.render_widget(
         Paragraph::new(format!(
             "{} v{}",
@@ -100,7 +155,6 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
         .block(Block::new().borders(Borders::ALL)),
         layout_sidebar[0],
     );
-    // frame.render_widget(sidebar, layout_sidebar[1]);
     frame.render_stateful_widget(sidebar, layout_sidebar[1], &mut app.sidebar_state);
     frame.render_widget(chart_traffic_monitor, layout_sidebar[2]);
 }

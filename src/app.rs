@@ -13,6 +13,17 @@ use akasha::client as ac;
 
 use crate::pkginfo::PkgInfo;
 
+pub enum CurrentPage {
+    Home,
+    Proxies,
+    Profiles,
+    Connections,
+    Rules,
+    Logs,
+    Test,
+    Settings,
+}
+
 // #[derive(Debug, Default)]
 pub struct App {
     /// Is the application running?
@@ -26,6 +37,7 @@ pub struct App {
     // Sidebar selective status.
     pub sidebar_state: ListState,
     pub sidebar_items: Vec<&'static str>,
+    pub current_page: CurrentPage,
 
     // ANCHOR: demo
     pub data: VecDeque<(f64, f64)>,
@@ -44,7 +56,7 @@ impl App {
             pkginfo: PkgInfo::new(),
             mihomo: ac::Builder::new()
                 .protocol(ac::Protocol::LocalSocket)
-                .socket_path("/tmp/mihomo.sock".to_string())
+                .socket_path("/tmp/akasha/mihomo.sock".to_string())
                 .pool_config(
                     ac::IpcPoolConfigBuilder::new()
                         .min_connections(0)
@@ -66,8 +78,25 @@ impl App {
                 "Test",
                 "Settings",
             ],
+            current_page: CurrentPage::Home,
             data: VecDeque::default(),
             tick: 0f64,
+        }
+    }
+
+    /// You must use it after finishing selecting the current page.
+    fn set_current_page(&mut self) {
+        match self.sidebar_state.selected() {
+            Some(0) => self.current_page = CurrentPage::Home,
+            Some(1) => self.current_page = CurrentPage::Proxies,
+            Some(2) => self.current_page = CurrentPage::Profiles,
+            Some(3) => self.current_page = CurrentPage::Connections,
+            Some(4) => self.current_page = CurrentPage::Rules,
+            Some(5) => self.current_page = CurrentPage::Logs,
+            Some(6) => self.current_page = CurrentPage::Test,
+            Some(7) => self.current_page = CurrentPage::Settings,
+            Some(_) => log::error!("Switching over array bound!"),
+            None => log::error!("There is something wrong with switching page."),
         }
     }
 
@@ -83,6 +112,7 @@ impl App {
             None => 0,
         };
         self.sidebar_state.select(Some(index));
+        self.set_current_page();
     }
 
     pub fn sidebar_previous(&mut self) {
@@ -97,6 +127,7 @@ impl App {
             None => 0,
         };
         self.sidebar_state.select(Some(index));
+        self.set_current_page();
     }
 
     /// Run the application's main loop.
@@ -124,7 +155,7 @@ impl App {
 
                     // self.data.push_back((self.tick, value));
                     // ANCHOR_END: chart sin demo
-                    if let Some(msg) = rx.recv().await {
+                    if let Ok(msg) = rx.try_recv() {
                         // print!("Traffic information: {:?}\r\n", msg);
                         let inner_json_str = msg["data"].as_str().unwrap().trim();
                         let inner_value: serde_json::Value = serde_json::from_str(inner_json_str).unwrap();
@@ -133,7 +164,7 @@ impl App {
 
                         self.tick += 1.0;
 
-                        if self.data.len() >= 64 {
+                        if self.data.len() >= 1024 {
                             self.data.pop_front();
                         }
 
