@@ -33,18 +33,52 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
         .direction(Direction::Vertical)
         .constraints(vec![
             Constraint::Length(3),
-            Constraint::Percentage(60),
-            Constraint::Percentage(40),
+            Constraint::Percentage(50),
+            Constraint::Percentage(50),
         ])
         .split(layout_root[0]);
+    let layout_monitor = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(vec![Constraint::Min(0), Constraint::Length(3)])
+        .split(layout_sidebar[2]);
     // ANCHOR_END: setup layout
 
+    // ANCHOR: setup traffic monitor chart and dataset
+    // The origin unit b to kb.
+    let up_set: Vec<(f64, f64)> = app
+        .traffic_data
+        .iter()
+        .map(|&(tick, up, _, _, _)| (tick, up / 1024f64))
+        .collect();
+    let down_set: Vec<(f64, f64)> = app
+        .traffic_data
+        .iter()
+        .map(|&(tick, _, down, _, _)| (tick, down / 1024f64))
+        .collect();
+    // The origin unit: b
+    let up_speed = app
+        .traffic_data
+        .back()
+        .unwrap_or(&(0f64, 0f64, 0f64, 0f64, 0f64))
+        .1;
+    let down_speed = app
+        .traffic_data
+        .back()
+        .unwrap_or(&(0f64, 0f64, 0f64, 0f64, 0f64))
+        .2;
+    // let up_total = app.traffic_data.back().unwrap().3;
+    // let down_total = app.traffic_data.back().unwrap().4;
     let datasets = vec![
         Dataset::default()
-            .name("mihomo traffic")
+            .name("up speed")
             .marker(symbols::Marker::Braille)
             .style(Style::default().fg(Color::Cyan))
-            .data(app.data.make_contiguous()),
+            .data(&up_set),
+        Dataset::default()
+            .name("down speed")
+            .marker(symbols::Marker::Braille)
+            .style(Style::default().fg(Color::LightRed))
+            .data(&down_set),
     ];
     let chart_traffic_monitor = Chart::new(datasets)
         .block(
@@ -62,11 +96,39 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
                     format!("{:.0}", app.tick).into(),
                 ]),
         )
-        .y_axis(Axis::default().title("KB/s").bounds([0.0, 2000.0]).labels([
-            "0".bold(),
-            "1k".into(),
-            "2k".into(),
-        ]));
+        .y_axis(
+            Axis::default()
+                .title("KB/s")
+                .bounds([0.0, 15000.0])
+                .labels(["0".bold(), "5k".into(), "10k".into(), "15k".into()]),
+        );
+    let up_speed_text = if up_speed <= 1024f64 {
+        format!("Up Speed: {:.0} B", up_speed)
+    } else if up_speed <= 1024f64 * 1024f64 {
+        format!("Up Speed: {:.2} KB", up_speed / 1024f64)
+    } else {
+        format!("Up Speed: {:.2} MB", up_speed / 1024f64 / 1024f64)
+    }
+    .cyan()
+    .bold();
+    let down_speed_text = if down_speed <= 1024f64 {
+        format!("Down Speed: {:.0} B", down_speed)
+    } else if down_speed <= 1024f64 * 1024f64 {
+        format!("Down Speed: {:.2} KB", down_speed / 1024f64)
+    } else {
+        format!("Down Speed: {:.2} MB", down_speed / 1024f64 / 1024f64)
+    }
+    .light_red()
+    .bold();
+    let traffic_info = vec![
+        Line::from(up_speed_text),
+        Line::from(down_speed_text),
+        Line::from(format!(
+            "Memory Inuse: {:.1} MB",
+            app.memory_inuse / 1024f64 / 1024f64
+        )),
+    ];
+    // ANCHOR_END: setup traffic monitor chart and dataset
 
     let sidebar_items: Vec<ListItem> = app
         .sidebar_items
@@ -84,10 +146,6 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
         )
         .highlight_symbol(">> ");
 
-    frame.render_widget(
-        Paragraph::new("Left").block(Block::new().borders(Borders::ALL)),
-        layout_root[0],
-    );
     match app.current_page {
         CurrentPage::Home => {
             frame.render_widget(
@@ -156,5 +214,6 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
         layout_sidebar[0],
     );
     frame.render_stateful_widget(sidebar, layout_sidebar[1], &mut app.sidebar_state);
-    frame.render_widget(chart_traffic_monitor, layout_sidebar[2]);
+    frame.render_widget(chart_traffic_monitor, layout_monitor[0]);
+    frame.render_widget(Paragraph::new(traffic_info), layout_monitor[1]);
 }

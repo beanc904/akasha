@@ -30,19 +30,27 @@ pub struct App {
     pub running: bool,
     // Event stream.
     pub event_stream: EventStream,
-    // Package informations.
-    pub pkginfo: PkgInfo,
     // Mihomo handle.
     pub mihomo: Arc<RwLock<ac::mihomo::Mihomo>>,
+    // Package informations.
+    pub pkginfo: PkgInfo,
     // Sidebar selective status.
     pub sidebar_state: ListState,
     pub sidebar_items: Vec<&'static str>,
     pub current_page: CurrentPage,
 
-    // ANCHOR: demo
-    pub data: VecDeque<(f64, f64)>,
+    // ANCHOR: traffic data
+    /// The touple signature is (tick, up, down, upTotal, downTotal). (unit: bps)
+    ///
+    /// The original ws_traffic data is:
+    /// Object {"data": String("{\"up\":0,\"down\":0,\"upTotal\":0,\"downTotal\":0}\n"), "type": String("Text")}
+    pub traffic_data: VecDeque<(f64, f64, f64, f64, f64)>,
+    /// The original ws_memory data is:
+    /// {"data":"{\"inuse\":41844736,\"oslimit\":0}\n","type":"Text"} (unit: b)
+    pub memory_inuse: f64,
+    /// It is the unit frame of traffic monitor, and also the x_axis.
     pub tick: f64,
-    // ANCHOR_END: demo
+    // ANCHOR_END: traffic data
 }
 
 impl App {
@@ -50,13 +58,13 @@ impl App {
     pub fn new() -> Self {
         let mut liststate = ListState::default();
         liststate.select(Some(0));
+        let pkginfo = PkgInfo::new();
         App {
             running: true,
             event_stream: EventStream::default(),
-            pkginfo: PkgInfo::new(),
             mihomo: ac::Builder::new()
                 .protocol(ac::Protocol::LocalSocket)
-                .socket_path("/tmp/akasha/mihomo.sock".to_string())
+                .socket_path(pkginfo.get_mihomo_socket().to_str().unwrap())
                 .pool_config(
                     ac::IpcPoolConfigBuilder::new()
                         .min_connections(0)
@@ -67,6 +75,7 @@ impl App {
                 )
                 .build()
                 .unwrap(),
+            pkginfo,
             sidebar_state: liststate,
             sidebar_items: vec![
                 "Home",
@@ -79,7 +88,8 @@ impl App {
                 "Settings",
             ],
             current_page: CurrentPage::Home,
-            data: VecDeque::default(),
+            traffic_data: VecDeque::default(),
+            memory_inuse: 0f64,
             tick: 0f64,
         }
     }
@@ -136,39 +146,43 @@ impl App {
         // Renderint interval
         let mut ticker = interval(Duration::from_millis(1000 / 24));
 
-        // ANCHOR: chart demo
-        let (tx, mut rx) = mpsc::channel::<Value>(64);
-        let mihomo_clone = self.mihomo.clone();
-        tokio::spawn(ac::ws_traffic(mihomo_clone, tx));
-        // ANCHOR_END: chart demo
+        // ANCHOR: start the thread of traffic monitor
+        let (tx_traffic, mut rx_traffic) = mpsc::channel::<Value>(64);
+        let (tx_memory, mut rx_memory) = mpsc::channel::<Value>(64);
+        let mihomo_traffic = self.mihomo.clone();
+        let mihomo_memory = self.mihomo.clone();
+        tokio::spawn(ac::ws_traffic(mihomo_traffic, tx_traffic));
+        tokio::spawn(ac::ws_memory(mihomo_memory, tx_memory));
+        // ANCHOR_END: start the thread of traffic monitor
 
         while self.running {
             tokio::select! {
                 _ = ticker.tick() => {
-                    // ANCHOR: chart sin demo
-                    // let value = (self.tick.sin() * 200.0 + 250.0).abs();
-                    // self.tick += 0.02;
-
-                    // if self.data.len() >= 1024 {
-                    //     self.data.pop_front();
-                    // }
-
-                    // self.data.push_back((self.tick, value));
-                    // ANCHOR_END: chart sin demo
-                    if let Ok(msg) = rx.try_recv() {
-                        // print!("Traffic information: {:?}\r\n", msg);
-                        let inner_json_str = msg["data"].as_str().unwrap().trim();
-                        let inner_value: serde_json::Value = serde_json::from_str(inner_json_str).unwrap();
-                        let up = inner_value["up"].as_f64().unwrap();
-                        // let down = inner_value["down"].as_i64().unwrap();
+                    // traffic monitor thread recv
+                    if let Ok(value) = rx_traffic.try_recv() {
+                        log::trace!("Traffic try_recv(): {:?}", value);
+                        let inner_json_data = value["data"].as_str().unwrap().trim();
+                        let data: Value = serde_json::from_str(inner_json_data).unwrap();
+                        let up = data["up"].as_f64().unwrap();
+                        let down = data["down"].as_f64().unwrap();
+                        let up_total = data["upTotal"].as_f64().unwrap();
+                        let down_total = data["downTotal"].as_f64().unwrap();
 
                         self.tick += 1.0;
 
-                        if self.data.len() >= 1024 {
-                            self.data.pop_front();
+                        if self.traffic_data.len() >= 1024 {
+                            self.traffic_data.pop_front();
                         }
 
-                        self.data.push_back((self.tick, up));
+                        self.traffic_data.push_back((self.tick, up, down, up_total, down_total));
+                    }
+
+                    // memory inuse thread recv
+                    if let Ok(value) = rx_memory.try_recv() {
+                        log::trace!("Memory try_recv(): {:?}", value);
+                        let inner_json_data = value["data"].as_str().unwrap().trim();
+                        let data: Value = serde_json::from_str(inner_json_data).unwrap();
+                        self.memory_inuse = data["inuse"].as_f64().unwrap();
                     }
 
                     terminal.draw(|frame| crate::ui::draw(&mut self, frame))?;
