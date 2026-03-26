@@ -103,20 +103,20 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
                 .labels(["0".bold(), "5k".into(), "10k".into(), "15k".into()]),
         );
     let up_speed_text = if up_speed <= 1024f64 {
-        format!("Up Speed: {:.0} B", up_speed)
+        format!("Up Speed: {:.0} B/s", up_speed)
     } else if up_speed <= 1024f64 * 1024f64 {
-        format!("Up Speed: {:.2} KB", up_speed / 1024f64)
+        format!("Up Speed: {:.2} KB/s", up_speed / 1024f64)
     } else {
-        format!("Up Speed: {:.2} MB", up_speed / 1024f64 / 1024f64)
+        format!("Up Speed: {:.2} MB/s", up_speed / 1024f64 / 1024f64)
     }
     .cyan()
     .bold();
     let down_speed_text = if down_speed <= 1024f64 {
-        format!("Down Speed: {:.0} B", down_speed)
+        format!("Down Speed: {:.0} B/s", down_speed)
     } else if down_speed <= 1024f64 * 1024f64 {
-        format!("Down Speed: {:.2} KB", down_speed / 1024f64)
+        format!("Down Speed: {:.2} KB/s", down_speed / 1024f64)
     } else {
-        format!("Down Speed: {:.2} MB", down_speed / 1024f64 / 1024f64)
+        format!("Down Speed: {:.2} MB/s", down_speed / 1024f64 / 1024f64)
     }
     .light_red()
     .bold();
@@ -131,13 +131,18 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
     // ANCHOR_END: setup traffic monitor chart and dataset
 
     let sidebar_items: Vec<ListItem> = app
-        .sidebar_items
+        .sidebar_status
+        .1
         .iter()
         .map(|i| ListItem::new(*i).style(Style::default().fg(Color::White)))
         .collect();
 
     let sidebar = List::new(sidebar_items)
-        .block(Block::default().title(" Menu ").borders(Borders::ALL))
+        .block(
+            Block::default()
+                .title(" Menu(Tab/BackTab) ")
+                .borders(Borders::ALL),
+        )
         .highlight_style(
             Style::default()
                 .bg(Color::White)
@@ -146,13 +151,36 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
         )
         .highlight_symbol(">> ");
 
-    match app.current_page {
-        CurrentPage::Home => {
-            frame.render_widget(
-                Paragraph::new("Now it is selecting home.")
-                    .block(Block::new().borders(Borders::ALL)),
-                layout_root[1],
-            );
+    match app.sidebar_status.2 {
+        CurrentPage::Dashboard => {
+            let block = Block::default().borders(Borders::ALL).title(" Dashboard ");
+            let block_inner = block.inner(layout_root[1]);
+            let mainwindow = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints(vec![Constraint::Length(20), Constraint::Min(0)])
+                .split(block_inner);
+            frame.render_widget(block, layout_root[1]);
+
+            let tab_items: Vec<ListItem> = app
+                .dashboard_status
+                .1
+                .iter()
+                .map(|i| ListItem::new(*i).style(Style::default().fg(Color::Blue)))
+                .collect();
+            let tab = List::new(tab_items)
+                .block(
+                    Block::default()
+                        .title(" Tabs(J/K) ")
+                        .borders(Borders::RIGHT),
+                )
+                .highlight_style(
+                    Style::default()
+                        .bg(Color::White)
+                        .fg(Color::Red)
+                        .add_modifier(Modifier::ITALIC),
+                )
+                .highlight_symbol(" * ");
+            frame.render_stateful_widget(tab, mainwindow[0], &mut app.dashboard_status.0);
         }
         CurrentPage::Proxies => {
             frame.render_widget(
@@ -213,7 +241,7 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
         .block(Block::new().borders(Borders::ALL)),
         layout_sidebar[0],
     );
-    frame.render_stateful_widget(sidebar, layout_sidebar[1], &mut app.sidebar_state);
+    frame.render_stateful_widget(sidebar, layout_sidebar[1], &mut app.sidebar_status.0);
     frame.render_widget(chart_traffic_monitor, layout_monitor[0]);
     frame.render_widget(Paragraph::new(traffic_info), layout_monitor[1]);
 }

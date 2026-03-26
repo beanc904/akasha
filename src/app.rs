@@ -14,7 +14,7 @@ use akasha::client as ac;
 use crate::pkginfo::PkgInfo;
 
 pub enum CurrentPage {
-    Home,
+    Dashboard,
     Proxies,
     Profiles,
     Connections,
@@ -22,6 +22,18 @@ pub enum CurrentPage {
     Logs,
     Test,
     Settings,
+}
+
+pub enum DashboardTab {
+    Profile,
+    CurrentNode,
+    NetworkSettings,
+    ProxyMode,
+    TrafficStats,
+    WebsiteTests,
+    IpInformation,
+    ClashInfo,
+    SystemInfo,
 }
 
 // #[derive(Debug, Default)]
@@ -35,9 +47,9 @@ pub struct App {
     // Package informations.
     pub pkginfo: PkgInfo,
     // Sidebar selective status.
-    pub sidebar_state: ListState,
-    pub sidebar_items: Vec<&'static str>,
-    pub current_page: CurrentPage,
+    pub sidebar_status: (ListState, Vec<&'static str>, CurrentPage),
+    // Main area select tab.
+    pub dashboard_status: (ListState, Vec<&'static str>, DashboardTab),
 
     // ANCHOR: traffic data
     /// The touple signature is (tick, up, down, upTotal, downTotal). (unit: bps)
@@ -56,8 +68,6 @@ pub struct App {
 impl App {
     /// Construct a new instance of [`App`].
     pub fn new() -> Self {
-        let mut liststate = ListState::default();
-        liststate.select(Some(0));
         let pkginfo = PkgInfo::new();
         App {
             running: true,
@@ -76,18 +86,35 @@ impl App {
                 .build()
                 .unwrap(),
             pkginfo,
-            sidebar_state: liststate,
-            sidebar_items: vec![
-                "Home",
-                "Proxies",
-                "Profiles",
-                "Connections",
-                "Rules",
-                "Logs",
-                "Test",
-                "Settings",
-            ],
-            current_page: CurrentPage::Home,
+            sidebar_status: (
+                ListState::default().with_selected(Some(0)),
+                vec![
+                    "Dashboard",
+                    "Proxies",
+                    "Profiles",
+                    "Connections",
+                    "Rules",
+                    "Logs",
+                    "Test",
+                    "Settings",
+                ],
+                CurrentPage::Dashboard,
+            ),
+            dashboard_status: (
+                ListState::default().with_selected(Some(0)),
+                vec![
+                    "Profile",
+                    "Current Node",
+                    "Network Settings",
+                    "Proxy Mode",
+                    "Traffic Stats",
+                    "Website Tests",
+                    "IP Information",
+                    "Clash Info",
+                    "System Info",
+                ],
+                DashboardTab::Profile,
+            ),
             traffic_data: VecDeque::default(),
             memory_inuse: 0f64,
             tick: 0f64,
@@ -95,49 +122,96 @@ impl App {
     }
 
     /// You must use it after finishing selecting the current page.
-    fn set_current_page(&mut self) {
-        match self.sidebar_state.selected() {
-            Some(0) => self.current_page = CurrentPage::Home,
-            Some(1) => self.current_page = CurrentPage::Proxies,
-            Some(2) => self.current_page = CurrentPage::Profiles,
-            Some(3) => self.current_page = CurrentPage::Connections,
-            Some(4) => self.current_page = CurrentPage::Rules,
-            Some(5) => self.current_page = CurrentPage::Logs,
-            Some(6) => self.current_page = CurrentPage::Test,
-            Some(7) => self.current_page = CurrentPage::Settings,
+    fn update_liststate_status(&mut self) {
+        match self.sidebar_status.0.selected() {
+            Some(0) => self.sidebar_status.2 = CurrentPage::Dashboard,
+            Some(1) => self.sidebar_status.2 = CurrentPage::Proxies,
+            Some(2) => self.sidebar_status.2 = CurrentPage::Profiles,
+            Some(3) => self.sidebar_status.2 = CurrentPage::Connections,
+            Some(4) => self.sidebar_status.2 = CurrentPage::Rules,
+            Some(5) => self.sidebar_status.2 = CurrentPage::Logs,
+            Some(6) => self.sidebar_status.2 = CurrentPage::Test,
+            Some(7) => self.sidebar_status.2 = CurrentPage::Settings,
             Some(_) => log::error!("Switching over array bound!"),
             None => log::error!("There is something wrong with switching page."),
+        }
+
+        match self.dashboard_status.0.selected() {
+            Some(0) => self.dashboard_status.2 = DashboardTab::Profile,
+            Some(1) => self.dashboard_status.2 = DashboardTab::CurrentNode,
+            Some(2) => self.dashboard_status.2 = DashboardTab::NetworkSettings,
+            Some(3) => self.dashboard_status.2 = DashboardTab::ProxyMode,
+            Some(4) => self.dashboard_status.2 = DashboardTab::TrafficStats,
+            Some(5) => self.dashboard_status.2 = DashboardTab::WebsiteTests,
+            Some(6) => self.dashboard_status.2 = DashboardTab::IpInformation,
+            Some(7) => self.dashboard_status.2 = DashboardTab::ClashInfo,
+            Some(8) => self.dashboard_status.2 = DashboardTab::SystemInfo,
+            Some(_) => log::error!("Switching over array bound!"),
+            None => log::error!("There is something wrong with switching dashboard tab."),
+        }
+    }
+
+    fn liststate_switch(is_next: bool, state: &mut ListState, items: &Vec<&'static str>) {
+        match is_next {
+            true => {
+                // Switch to the next tab
+                let index = match state.selected() {
+                    Some(i) => {
+                        if i >= items.len() - 1 {
+                            0
+                        } else {
+                            i + 1
+                        }
+                    }
+                    None => 0,
+                };
+                state.select(Some(index));
+            }
+            false => {
+                // Switch to the previous tab
+                let index = match state.selected() {
+                    Some(i) => {
+                        if i == 0 {
+                            items.len() - 1
+                        } else {
+                            i - 1
+                        }
+                    }
+                    None => 0,
+                };
+                state.select(Some(index));
+            }
         }
     }
 
     pub fn sidebar_next(&mut self) {
-        let index = match self.sidebar_state.selected() {
-            Some(i) => {
-                if i >= self.sidebar_items.len() - 1 {
-                    0
-                } else {
-                    i + 1
-                }
-            }
-            None => 0,
-        };
-        self.sidebar_state.select(Some(index));
-        self.set_current_page();
+        App::liststate_switch(true, &mut self.sidebar_status.0, &self.sidebar_status.1);
+        self.update_liststate_status();
     }
 
     pub fn sidebar_previous(&mut self) {
-        let index = match self.sidebar_state.selected() {
-            Some(i) => {
-                if i == 0 {
-                    self.sidebar_items.len() - 1
-                } else {
-                    i - 1
-                }
+        App::liststate_switch(false, &mut self.sidebar_status.0, &self.sidebar_status.1);
+        self.update_liststate_status();
+    }
+
+    pub fn tab_switch(&mut self, is_next: bool) {
+        match self.sidebar_status.2 {
+            CurrentPage::Dashboard => {
+                App::liststate_switch(
+                    is_next,
+                    &mut self.dashboard_status.0,
+                    &self.dashboard_status.1,
+                );
+                self.update_liststate_status();
             }
-            None => 0,
-        };
-        self.sidebar_state.select(Some(index));
-        self.set_current_page();
+            CurrentPage::Proxies => todo!(),
+            CurrentPage::Profiles => todo!(),
+            CurrentPage::Connections => todo!(),
+            CurrentPage::Rules => todo!(),
+            CurrentPage::Logs => todo!(),
+            CurrentPage::Test => todo!(),
+            CurrentPage::Settings => todo!(),
+        }
     }
 
     /// Run the application's main loop.
@@ -220,6 +294,8 @@ impl App {
             | (KeyModifiers::CONTROL, KeyCode::Char('c') | KeyCode::Char('C')) => self.quit(),
             (_, KeyCode::Tab) => self.sidebar_next(),
             (_, KeyCode::BackTab) => self.sidebar_previous(),
+            (_, KeyCode::Char('j')) => self.tab_switch(true),
+            (_, KeyCode::Char('k')) => self.tab_switch(false),
             // Add other key handlers here.
             _ => {}
         }
