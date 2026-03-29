@@ -99,8 +99,8 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
         .y_axis(
             Axis::default()
                 .title("KB/s")
-                .bounds([0.0, 15000.0])
-                .labels(["0".bold(), "5k".into(), "10k".into(), "15k".into()]),
+                .bounds([0.0, 10000.0])
+                .labels(["0".bold(), "5k".into(), "10k".into()]),
         );
     let up_speed_text = if up_speed <= 1024f64 {
         format!("Up Speed: {:.0} B/s", up_speed)
@@ -183,11 +183,34 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
             frame.render_stateful_widget(tab, mainwindow[0], &mut app.dashboard_status.0);
         }
         CurrentPage::Proxies => {
-            frame.render_widget(
-                Paragraph::new("Now it is selecting proxies.")
-                    .block(Block::new().borders(Borders::ALL)),
-                layout_root[1],
-            );
+            let block = Block::default().borders(Borders::ALL).title(" Proxies ");
+            let block_inner = block.inner(layout_root[1]);
+            let mainwindow = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints(vec![Constraint::Length(20), Constraint::Min(0)])
+                .split(block_inner);
+            frame.render_widget(block, layout_root[1]);
+
+            let tab_items: Vec<ListItem> = app
+                .proxies_status
+                .1
+                .iter()
+                .map(|i| ListItem::new(i.clone()).style(Style::default().fg(Color::Blue)))
+                .collect();
+            let tab = List::new(tab_items)
+                .block(
+                    Block::default()
+                        .title(" Tabs(J/K) ")
+                        .borders(Borders::RIGHT),
+                )
+                .highlight_style(
+                    Style::default()
+                        .bg(Color::White)
+                        .fg(Color::Red)
+                        .add_modifier(Modifier::ITALIC),
+                )
+                .highlight_symbol(" * ");
+            frame.render_stateful_widget(tab, mainwindow[0], &mut app.proxies_status.0);
         }
         CurrentPage::Profiles => {
             frame.render_widget(

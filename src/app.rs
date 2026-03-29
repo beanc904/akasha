@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::sync::Arc;
 
@@ -10,6 +11,7 @@ use tokio::sync::{RwLock, mpsc};
 use tokio::time::{Duration, interval};
 
 use akasha::client as ac;
+use akasha::parser::config::MihomoConfig;
 
 use crate::pkginfo::PkgInfo;
 
@@ -44,12 +46,15 @@ pub struct App {
     pub event_stream: EventStream,
     // Mihomo handle.
     pub mihomo: Arc<RwLock<ac::mihomo::Mihomo>>,
+    // Mihomo config.yaml
+    pub mihomo_config: MihomoConfig,
     // Package informations.
     pub pkginfo: PkgInfo,
     // Sidebar selective status.
     pub sidebar_status: (ListState, Vec<&'static str>, CurrentPage),
     // Main area select tab.
     pub dashboard_status: (ListState, Vec<&'static str>, DashboardTab),
+    pub proxies_status: (ListState, Vec<String>),
 
     // ANCHOR: traffic data
     /// The touple signature is (tick, up, down, upTotal, downTotal). (unit: bps)
@@ -69,6 +74,7 @@ impl App {
     /// Construct a new instance of [`App`].
     pub fn new() -> Self {
         let pkginfo = PkgInfo::new();
+        let mihomo_config = MihomoConfig::new("resources/config.yaml").unwrap();
         App {
             running: true,
             event_stream: EventStream::default(),
@@ -85,7 +91,6 @@ impl App {
                 )
                 .build()
                 .unwrap(),
-            pkginfo,
             sidebar_status: (
                 ListState::default().with_selected(Some(0)),
                 vec![
@@ -115,9 +120,15 @@ impl App {
                 ],
                 DashboardTab::Profile,
             ),
+            proxies_status: (
+                ListState::default().with_selected(Some(0)),
+                mihomo_config.get_proxy_groups_namevec(),
+            ),
             traffic_data: VecDeque::default(),
             memory_inuse: 0f64,
             tick: 0f64,
+            mihomo_config,
+            pkginfo,
         }
     }
 
@@ -151,7 +162,10 @@ impl App {
         }
     }
 
-    fn liststate_switch(is_next: bool, state: &mut ListState, items: &Vec<&'static str>) {
+    fn liststate_switch<'a, S>(is_next: bool, state: &mut ListState, items: &Vec<S>)
+    where
+        S: Into<Cow<'a, str>>,
+    {
         match is_next {
             true => {
                 // Switch to the next tab
@@ -204,7 +218,11 @@ impl App {
                 );
                 self.update_liststate_status();
             }
-            CurrentPage::Proxies => todo!(),
+            CurrentPage::Proxies => {
+                App::liststate_switch(is_next, &mut self.proxies_status.0, &self.proxies_status.1);
+                // // It seems that it does not need to update enumeration.
+                // self.update_liststate_status();
+            }
             CurrentPage::Profiles => todo!(),
             CurrentPage::Connections => todo!(),
             CurrentPage::Rules => todo!(),
