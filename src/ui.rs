@@ -1,5 +1,5 @@
 use ratatui::prelude::*;
-use ratatui::widgets::{Axis, Chart, Dataset};
+use ratatui::widgets::{Axis, Chart, Dataset, Scrollbar, ScrollbarState};
 use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph};
 
 use crate::app::{App, CurrentPage};
@@ -151,6 +151,10 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
         )
         .highlight_symbol(">> ");
 
+    let selected_tab_style = Style::default()
+        .bg(Color::White)
+        .fg(Color::DarkGray)
+        .add_modifier(Modifier::ITALIC);
     match app.sidebar_status.2 {
         CurrentPage::Dashboard => {
             let block = Block::default().borders(Borders::ALL).title(" Dashboard ");
@@ -165,7 +169,7 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
                 .dashboard_status
                 .1
                 .iter()
-                .map(|i| ListItem::new(*i).style(Style::default().fg(Color::Blue)))
+                .map(|i| ListItem::new(*i).style(Style::default()))
                 .collect();
             let tab = List::new(tab_items)
                 .block(
@@ -173,17 +177,14 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
                         .title(" Tabs(J/K) ")
                         .borders(Borders::RIGHT),
                 )
-                .highlight_style(
-                    Style::default()
-                        .bg(Color::White)
-                        .fg(Color::Red)
-                        .add_modifier(Modifier::ITALIC),
-                )
+                .highlight_style(selected_tab_style)
                 .highlight_symbol(" * ");
             frame.render_stateful_widget(tab, mainwindow[0], &mut app.dashboard_status.0);
         }
         CurrentPage::Proxies => {
-            let block = Block::default().borders(Borders::ALL).title(" Proxies ");
+            let block = Block::default()
+                .borders(Borders::ALL)
+                .title(" Proxies(Enter/Esc) ");
             let block_inner = block.inner(layout_root[1]);
             let mainwindow = Layout::default()
                 .direction(Direction::Horizontal)
@@ -191,26 +192,68 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
                 .split(block_inner);
             frame.render_widget(block, layout_root[1]);
 
+            let selected_proxy_style = Style::default()
+                .bg(Color::Yellow)
+                .fg(Color::Blue)
+                .add_modifier(Modifier::BOLD);
             let tab_items: Vec<ListItem> = app
                 .proxies_status
                 .1
                 .iter()
-                .map(|i| ListItem::new(i.clone()).style(Style::default().fg(Color::Blue)))
+                .enumerate()
+                .map(|(i, item)| {
+                    let mut style = Style::default();
+                    if i == app.selected_proxy.0 {
+                        style = selected_proxy_style;
+                    }
+                    ListItem::new(item.clone()).style(style)
+                })
                 .collect();
             let tab = List::new(tab_items)
                 .block(
                     Block::default()
-                        .title(" Tabs(J/K) ")
+                        .title(if app.proxies_status.4 {
+                            " Tabs(J/K) ".fg(Color::White)
+                        } else {
+                            " Tabs(J/K) ".fg(Color::Yellow)
+                        })
                         .borders(Borders::RIGHT),
                 )
-                .highlight_style(
-                    Style::default()
-                        .bg(Color::White)
-                        .fg(Color::Red)
-                        .add_modifier(Modifier::ITALIC),
-                )
+                .highlight_style(selected_tab_style)
                 .highlight_symbol(" * ");
             frame.render_stateful_widget(tab, mainwindow[0], &mut app.proxies_status.0);
+
+            let [list_area, scrollbar_area] =
+                Layout::horizontal([Constraint::Min(0), Constraint::Length(1)])
+                    .areas(mainwindow[1]);
+            let index = app.proxies_status.0.selected().unwrap();
+            let proxies_item: Vec<ListItem> = app.proxies_status.3[index]
+                .iter()
+                .enumerate()
+                .map(|(i, item)| {
+                    let mut style = Style::default();
+                    if Some(app.selected_proxy.0) == app.proxies_status.0.selected() {
+                        if i == app.selected_proxy.1 {
+                            style = selected_proxy_style;
+                        }
+                    }
+                    ListItem::new(item.clone()).style(style)
+                })
+                .collect();
+            let proxies = List::new(proxies_item)
+                .block(Block::default().title(if app.proxies_status.4 {
+                    " Proxies(J/K) ".fg(Color::Yellow)
+                } else {
+                    " Proxies(J/K) ".fg(Color::White)
+                }))
+                .highlight_style(selected_tab_style)
+                .highlight_symbol(" > ")
+                .scroll_padding(2);
+            let scrollbar = Scrollbar::new(ratatui::widgets::ScrollbarOrientation::VerticalRight);
+            let mut scrollbar_state = ScrollbarState::new(app.proxies_status.3[index].len())
+                .position(app.proxies_status.2.selected().unwrap_or(0));
+            frame.render_stateful_widget(proxies, list_area, &mut app.proxies_status.2);
+            frame.render_stateful_widget(scrollbar, scrollbar_area, &mut scrollbar_state);
         }
         CurrentPage::Profiles => {
             frame.render_widget(
@@ -249,7 +292,7 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
         }
         CurrentPage::Settings => {
             frame.render_widget(
-                Paragraph::new("Now it is selecting settings.")
+                Paragraph::new(format!("The authors is {}.", app.pkginfo.get_authors()))
                     .block(Block::new().borders(Borders::ALL)),
                 layout_root[1],
             );

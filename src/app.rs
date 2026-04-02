@@ -54,7 +54,12 @@ pub struct App {
     pub sidebar_status: (ListState, Vec<&'static str>, CurrentPage),
     // Main area select tab.
     pub dashboard_status: (ListState, Vec<&'static str>, DashboardTab),
-    pub proxies_status: (ListState, Vec<String>),
+    // (0, 1, 2, 3)
+    // 1: the state of proxy group 2: the names of each proxy group
+    // 3: the state of group details 4: the detailed events of each group
+    // 5: is focus of the selected proxy group
+    pub proxies_status: (ListState, Vec<String>, ListState, Vec<Vec<String>>, bool),
+    pub selected_proxy: (usize, usize),
 
     // ANCHOR: traffic data
     /// The touple signature is (tick, up, down, upTotal, downTotal). (unit: bps)
@@ -123,7 +128,11 @@ impl App {
             proxies_status: (
                 ListState::default().with_selected(Some(0)),
                 mihomo_config.get_proxy_groups_namevec(),
+                ListState::default().with_selected(Some(0)),
+                mihomo_config.get_proxy_groups_proxies(),
+                false,
             ),
+            selected_proxy: (0, 0),
             traffic_data: VecDeque::default(),
             memory_inuse: 0f64,
             tick: 0f64,
@@ -132,7 +141,17 @@ impl App {
         }
     }
 
+    #[allow(dead_code)]
+    fn get_selected_groupproxy(&self) -> (String, String) {
+        let group_index = self.selected_proxy.0;
+        let proxy_index = self.selected_proxy.1;
+        let group_name = self.proxies_status.1[group_index].clone();
+        let proxy_name = self.proxies_status.3[group_index][proxy_index].clone();
+        (group_name, proxy_name)
+    }
+
     /// You must use it after finishing selecting the current page.
+    /// Sync the status of enumeration and liststate.
     fn update_liststate_status(&mut self) {
         match self.sidebar_status.0.selected() {
             Some(0) => self.sidebar_status.2 = CurrentPage::Dashboard,
@@ -219,9 +238,63 @@ impl App {
                 self.update_liststate_status();
             }
             CurrentPage::Proxies => {
-                App::liststate_switch(is_next, &mut self.proxies_status.0, &self.proxies_status.1);
-                // // It seems that it does not need to update enumeration.
-                // self.update_liststate_status();
+                if !self.proxies_status.4 {
+                    // Now the focus is the groups list.
+                    App::liststate_switch(
+                        is_next,
+                        &mut self.proxies_status.0,
+                        &self.proxies_status.1,
+                    );
+                    // // It seems that it does not need to update enumeration.
+                    // self.update_liststate_status();
+                    // Reset the selected proxy item, each time switch the groups tab.
+                    self.proxies_status.2.select(Some(0));
+                } else {
+                    // Now the focus is the details list.
+                    let index = self.proxies_status.0.selected().unwrap();
+                    App::liststate_switch(
+                        is_next,
+                        &mut self.proxies_status.2,
+                        &self.proxies_status.3[index],
+                    );
+                }
+            }
+            CurrentPage::Profiles => todo!(),
+            CurrentPage::Connections => todo!(),
+            CurrentPage::Rules => todo!(),
+            CurrentPage::Logs => todo!(),
+            CurrentPage::Test => todo!(),
+            CurrentPage::Settings => todo!(),
+        }
+    }
+
+    pub fn enter_handler(&mut self) {
+        match self.sidebar_status.2 {
+            CurrentPage::Dashboard => todo!(),
+            CurrentPage::Proxies => {
+                if self.proxies_status.4 {
+                    // Cursor at details
+                    self.selected_proxy.0 = self.proxies_status.0.selected().unwrap();
+                    self.selected_proxy.1 = self.proxies_status.2.selected().unwrap();
+                } else {
+                    // Cursor at tabs
+                    self.proxies_status.4 = true;
+                }
+            }
+            CurrentPage::Profiles => todo!(),
+            CurrentPage::Connections => todo!(),
+            CurrentPage::Rules => todo!(),
+            CurrentPage::Logs => todo!(),
+            CurrentPage::Test => todo!(),
+            CurrentPage::Settings => todo!(),
+        }
+    }
+
+    pub fn esc_handler(&mut self) {
+        match self.sidebar_status.2 {
+            CurrentPage::Dashboard => todo!(),
+            CurrentPage::Proxies => {
+                self.proxies_status.4 = false;
             }
             CurrentPage::Profiles => todo!(),
             CurrentPage::Connections => todo!(),
@@ -308,12 +381,14 @@ impl App {
     /// Handles the key events and updates the state of [`App`].
     fn on_key_event(&mut self, key: KeyEvent) {
         match (key.modifiers, key.code) {
-            (_, KeyCode::Esc | KeyCode::Char('q'))
+            (_, KeyCode::Char('q'))
             | (KeyModifiers::CONTROL, KeyCode::Char('c') | KeyCode::Char('C')) => self.quit(),
             (_, KeyCode::Tab) => self.sidebar_next(),
             (_, KeyCode::BackTab) => self.sidebar_previous(),
             (_, KeyCode::Char('j')) => self.tab_switch(true),
             (_, KeyCode::Char('k')) => self.tab_switch(false),
+            (_, KeyCode::Enter) => self.enter_handler(),
+            (_, KeyCode::Esc) => self.esc_handler(),
             // Add other key handlers here.
             _ => {}
         }

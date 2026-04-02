@@ -37,4 +37,12 @@ impl MihomoConfig {
         }
         vec
     }
+
+    pub fn get_proxy_groups_proxies(&self) -> Vec<Vec<String>> {
+        let mut groups = vec![];
+        for proxy_group in self.proxy_groups.iter() {
+            groups.push(proxy_group.proxies.clone());
+        }
+        groups
+    }
 }

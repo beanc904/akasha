@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 pub struct PkgInfo {
     name: &'static str,
     version: &'static str,
+    authors: &'static str,
     config_path: Box<Path>,
     cache_path: Box<Path>,
     tmp_path: Box<Path>,
@@ -13,6 +14,7 @@ impl PkgInfo {
         Self {
             name: env!("CARGO_PKG_NAME"),
             version: env!("CARGO_PKG_VERSION"),
+            authors: env!("CARGO_PKG_AUTHORS"),
             config_path: dirs::config_dir().unwrap().into_boxed_path(),
             cache_path: dirs::cache_dir().unwrap().into_boxed_path(),
             // delete target after beta version
@@ -29,6 +31,10 @@ impl PkgInfo {
 
     pub fn get_version(&self) -> &'static str {
         self.version
+    }
+
+    pub fn get_authors(&self) -> &'static str {
+        self.authors
     }
 
     pub fn get_app_configdir(&self) -> Box<Path> {
