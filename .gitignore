@@ -1,4 +1,5 @@
 /target
-/error.logs
+/debug
 config.yaml
 clash-verge.yaml
+.env

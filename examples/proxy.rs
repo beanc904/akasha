@@ -25,6 +25,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
         )
         .build();
 
+    // // Show the traffic chain.
+    // if let Ok(mi) = &mihomo {
+    //     let m = mi.read().await;
+    //     let conn = m.get_connections().await;
+    //     if let Ok(con) = conn {
+    //         println!("Connection: {:?}", con);
+    //     }
+    // }
+
     // Check the proxy node information.
     if let Ok(mi) = &mihomo {
         let m = mi.read().await;
