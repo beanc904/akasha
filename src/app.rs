@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::sync::Arc;
 
@@ -55,11 +54,16 @@ pub struct App {
     // Main area select tab.
     pub dashboard_status: (ListState, Vec<&'static str>, DashboardTab),
     // (0, 1, 2, 3)
-    // 1: the state of proxy group 2: the names of each proxy group
+    // 1: the state of proxy group 2: the (name, selected) of each proxy group
     // 3: the state of group details 4: the detailed events of each group
     // 5: is focus of the selected proxy group
-    pub proxies_status: (ListState, Vec<String>, ListState, Vec<Vec<String>>, bool),
-    pub selected_proxy: (usize, usize),
+    pub proxies_status: (
+        ListState,
+        Vec<(String, usize)>,
+        ListState,
+        Vec<Vec<String>>,
+        bool,
+    ),
 
     // ANCHOR: traffic data
     /// The touple signature is (tick, up, down, upTotal, downTotal). (unit: bps)
@@ -127,27 +131,21 @@ impl App {
             ),
             proxies_status: (
                 ListState::default().with_selected(Some(0)),
-                mihomo_config.get_proxy_groups_namevec(),
+                mihomo_config
+                    .get_proxy_groups_namevec()
+                    .into_iter()
+                    .map(|name| (name, 0))
+                    .collect(),
                 ListState::default().with_selected(Some(0)),
                 mihomo_config.get_proxy_groups_proxies(),
                 false,
             ),
-            selected_proxy: (0, 0),
             traffic_data: VecDeque::default(),
             memory_inuse: 0f64,
             tick: 0f64,
             mihomo_config,
             pkginfo,
         }
-    }
-
-    #[allow(dead_code)]
-    fn get_selected_groupproxy(&self) -> (String, String) {
-        let group_index = self.selected_proxy.0;
-        let proxy_index = self.selected_proxy.1;
-        let group_name = self.proxies_status.1[group_index].clone();
-        let proxy_name = self.proxies_status.3[group_index][proxy_index].clone();
-        (group_name, proxy_name)
     }
 
     /// You must use it after finishing selecting the current page.
@@ -181,16 +179,13 @@ impl App {
         }
     }
 
-    fn liststate_switch<'a, S>(is_next: bool, state: &mut ListState, items: &Vec<S>)
-    where
-        S: Into<Cow<'a, str>>,
-    {
+    fn liststate_switch(is_next: bool, state: &mut ListState, items_len: usize) {
         match is_next {
             true => {
                 // Switch to the next tab
                 let index = match state.selected() {
                     Some(i) => {
-                        if i >= items.len() - 1 {
+                        if i >= items_len - 1 {
                             0
                         } else {
                             i + 1
@@ -205,7 +200,7 @@ impl App {
                 let index = match state.selected() {
                     Some(i) => {
                         if i == 0 {
-                            items.len() - 1
+                            items_len - 1
                         } else {
                             i - 1
                         }
@@ -218,12 +213,20 @@ impl App {
     }
 
     pub fn sidebar_next(&mut self) {
-        App::liststate_switch(true, &mut self.sidebar_status.0, &self.sidebar_status.1);
+        App::liststate_switch(
+            true,
+            &mut self.sidebar_status.0,
+            self.sidebar_status.1.len(),
+        );
         self.update_liststate_status();
     }
 
     pub fn sidebar_previous(&mut self) {
-        App::liststate_switch(false, &mut self.sidebar_status.0, &self.sidebar_status.1);
+        App::liststate_switch(
+            false,
+            &mut self.sidebar_status.0,
+            self.sidebar_status.1.len(),
+        );
         self.update_liststate_status();
     }
 
@@ -233,7 +236,7 @@ impl App {
                 App::liststate_switch(
                     is_next,
                     &mut self.dashboard_status.0,
-                    &self.dashboard_status.1,
+                    self.dashboard_status.1.len(),
                 );
                 self.update_liststate_status();
             }
@@ -243,7 +246,7 @@ impl App {
                     App::liststate_switch(
                         is_next,
                         &mut self.proxies_status.0,
-                        &self.proxies_status.1,
+                        self.proxies_status.1.len(),
                     );
                     // // It seems that it does not need to update enumeration.
                     // self.update_liststate_status();
@@ -255,7 +258,7 @@ impl App {
                     App::liststate_switch(
                         is_next,
                         &mut self.proxies_status.2,
-                        &self.proxies_status.3[index],
+                        self.proxies_status.3[index].len(),
                     );
                 }
             }
@@ -268,14 +271,23 @@ impl App {
         }
     }
 
-    pub fn enter_handler(&mut self) {
+    pub async fn enter_handler(&mut self) {
         match self.sidebar_status.2 {
             CurrentPage::Dashboard => todo!(),
             CurrentPage::Proxies => {
                 if self.proxies_status.4 {
                     // Cursor at details
-                    self.selected_proxy.0 = self.proxies_status.0.selected().unwrap();
-                    self.selected_proxy.1 = self.proxies_status.2.selected().unwrap();
+                    let index_group = self.proxies_status.0.selected().unwrap();
+                    let index_proxy = self.proxies_status.2.selected().unwrap();
+                    self.proxies_status.1[index_group].1 = index_proxy;
+
+                    let name_group = &self.proxies_status.1[index_group].0;
+                    let name_proxy = &self.proxies_status.3[index_group][index_proxy];
+
+                    let mihomo = self.mihomo.clone();
+                    let mi = mihomo.read().await;
+
+                    let _ = mi.select_node_for_group(name_group, name_proxy).await;
                 } else {
                     // Cursor at tabs
                     self.proxies_status.4 = true;
@@ -320,6 +332,36 @@ impl App {
         tokio::spawn(ac::ws_memory(mihomo_memory, tx_memory));
         // ANCHOR_END: start the thread of traffic monitor
 
+        // ANCHOR: setup the group and proxy selected status in ui
+        let (tx_proxies, mut rx_proxies) = mpsc::channel::<Vec<usize>>(64);
+        let mihomo_proxies = self.mihomo.clone();
+        let proxy_group = self.proxies_status.1.clone();
+        let proxy_items = self.proxies_status.3.clone();
+        // Set the interval of the proxy async check task.
+        let mut ticker_proxy_task = interval(Duration::from_secs(5));
+        tokio::spawn(async move {
+            loop {
+                ticker_proxy_task.tick().await;
+                let mut selected_proxy: Vec<usize> = vec![];
+                let mi = mihomo_proxies.read().await;
+                for (i, group) in proxy_group.iter().enumerate() {
+                    let proxy = mi.get_proxy_by_name(group.0.as_str()).await;
+                    if let Ok(proxy) = proxy {
+                        match proxy.now {
+                            Some(now) => {
+                                let index =
+                                    proxy_items[i].iter().position(|name| name == &now).unwrap();
+                                selected_proxy.push(index);
+                            }
+                            None => {}
+                        }
+                    }
+                }
+                let _ = tx_proxies.send(selected_proxy).await;
+            }
+        });
+        // ANCHOR_END: setup the group and proxy selected status in ui
+
         while self.running {
             tokio::select! {
                 _ = ticker.tick() => {
@@ -350,6 +392,18 @@ impl App {
                         self.memory_inuse = data["inuse"].as_f64().unwrap();
                     }
 
+                    // proxies selected status thread recv
+                    if let Ok(value) = rx_proxies.try_recv() {
+                        log::trace!("Proxies Groups selected status: {:?}", value);
+                        if value.len() == self.proxies_status.1.len() {
+                            for (i, index) in value.iter().enumerate() {
+                                self.proxies_status.1[i].1 = *index;
+                            }
+                        } else {
+                            panic!("There is something wrong with group size.");
+                        }
+                    }
+
                     terminal.draw(|frame| crate::ui::draw(&mut self, frame))?;
                     // self.handle_crossterm_events().await?;
                 }
@@ -370,7 +424,7 @@ impl App {
         // let event = self.event_stream.next().fuse().await;
         // match event {
         match evt {
-            Event::Key(key) if key.kind == KeyEventKind::Press => self.on_key_event(key),
+            Event::Key(key) if key.kind == KeyEventKind::Press => self.on_key_event(key).await,
             Event::Mouse(_) => {}
             Event::Resize(_, _) => {}
             _ => {}
@@ -379,16 +433,16 @@ impl App {
     }
 
     /// Handles the key events and updates the state of [`App`].
-    fn on_key_event(&mut self, key: KeyEvent) {
+    async fn on_key_event(&mut self, key: KeyEvent) {
         match (key.modifiers, key.code) {
-            (_, KeyCode::Char('q'))
+            (_, KeyCode::Esc)
             | (KeyModifiers::CONTROL, KeyCode::Char('c') | KeyCode::Char('C')) => self.quit(),
             (_, KeyCode::Tab) => self.sidebar_next(),
             (_, KeyCode::BackTab) => self.sidebar_previous(),
             (_, KeyCode::Char('j')) => self.tab_switch(true),
             (_, KeyCode::Char('k')) => self.tab_switch(false),
-            (_, KeyCode::Enter) => self.enter_handler(),
-            (_, KeyCode::Esc) => self.esc_handler(),
+            (_, KeyCode::Enter) => self.enter_handler().await,
+            (_, KeyCode::Char('q')) => self.esc_handler(),
             // Add other key handlers here.
             _ => {}
         }

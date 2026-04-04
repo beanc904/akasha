@@ -1,6 +1,7 @@
 use ratatui::prelude::*;
 use ratatui::widgets::{Axis, Chart, Dataset, Scrollbar, ScrollbarState};
 use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph};
+use unicode_width::UnicodeWidthStr;
 
 use crate::app::{App, CurrentPage};
 
@@ -154,7 +155,7 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
     let selected_tab_style = Style::default()
         .bg(Color::White)
         .fg(Color::DarkGray)
-        .add_modifier(Modifier::ITALIC);
+        .add_modifier(Modifier::BOLD);
     match app.sidebar_status.2 {
         CurrentPage::Dashboard => {
             let block = Block::default().borders(Borders::ALL).title(" Dashboard ");
@@ -184,7 +185,7 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
         CurrentPage::Proxies => {
             let block = Block::default()
                 .borders(Borders::ALL)
-                .title(" Proxies(Enter/Esc) ");
+                .title(" Proxies(Enter/Q) ");
             let block_inner = block.inner(layout_root[1]);
             let mainwindow = Layout::default()
                 .direction(Direction::Horizontal)
@@ -202,11 +203,10 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
                 .iter()
                 .enumerate()
                 .map(|(i, item)| {
-                    let mut style = Style::default();
-                    if i == app.selected_proxy.0 {
-                        style = selected_proxy_style;
-                    }
-                    ListItem::new(item.clone()).style(style)
+                    let index = app.proxies_status.1[i].1;
+                    let selected_proxy_name = &app.proxies_status.3[i][index];
+                    ListItem::new(format!("{}\n({})", item.0, selected_proxy_name))
+                        .style(Style::default())
                 })
                 .collect();
             let tab = List::new(tab_items)
@@ -232,12 +232,13 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
                 .enumerate()
                 .map(|(i, item)| {
                     let mut style = Style::default();
-                    if Some(app.selected_proxy.0) == app.proxies_status.0.selected() {
-                        if i == app.selected_proxy.1 {
-                            style = selected_proxy_style;
-                        }
+                    if i == app.proxies_status.1[index].1 {
+                        style = selected_proxy_style;
                     }
-                    ListItem::new(item.clone()).style(style)
+                    // ListItem::new(item.clone()).style(style)
+                    // let delay = Some(0);
+                    let delay = None;
+                    make_item(item, delay, list_area.width).style(style)
                 })
                 .collect();
             let proxies = List::new(proxies_item)
@@ -310,4 +311,24 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
     frame.render_stateful_widget(sidebar, layout_sidebar[1], &mut app.sidebar_status.0);
     frame.render_widget(chart_traffic_monitor, layout_monitor[0]);
     frame.render_widget(Paragraph::new(traffic_info), layout_monitor[1]);
+}
+
+fn make_item<'a>(name: &'a String, value: Option<i32>, width: u16) -> ListItem<'a> {
+    let left = name;
+    let right = match value {
+        Some(value) => format!("{}ms", value),
+        None => format!(""),
+    };
+
+    let left_width = UnicodeWidthStr::width(left.as_str());
+    let right_width = UnicodeWidthStr::width(right.as_str());
+
+    let space_count = width as i32 - left_width as i32 - right_width as i32 - 3;
+    let spaces = " ".repeat(space_count.max(1) as usize);
+
+    ListItem::new(Line::from(vec![
+        Span::raw(left.to_string()),
+        Span::raw(spaces),
+        Span::raw(right).style(Style::default().fg(Color::Green)),
+    ]))
 }

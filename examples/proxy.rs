@@ -25,15 +25,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         )
         .build();
 
-    // // Show the traffic chain.
-    // if let Ok(mi) = &mihomo {
-    //     let m = mi.read().await;
-    //     let conn = m.get_connections().await;
-    //     if let Ok(con) = conn {
-    //         println!("Connection: {:?}", con);
-    //     }
-    // }
-
     // Check the proxy node information.
     if let Ok(mi) = &mihomo {
         let m = mi.read().await;
@@ -43,7 +34,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 Some(now) => {
                     if now == "自动选择" {
                         let detail = m.get_proxy_by_name("自动选择").await;
-                        println!("Now the chosen proxy is: {}", detail.unwrap().now.unwrap());
+                        println!(
+                            "Now the chosen proxy is: 自动选择 -> {}",
+                            detail.unwrap().now.unwrap()
+                        );
                     } else {
                         println!("Now the chosen proxy is: {}", now);
                     }
@@ -53,15 +47,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    // Change the proxy node.
-    if let Ok(mi) = &mihomo {
-        let m = mi.read().await;
-        let res = m.select_node_for_group("节点选择", "🇸🇬|新加坡-直连").await;
-        if let Ok(_) = res {
-            let proxy = m.get_proxy_by_name("节点选择").await;
-            println!("Now the chosen proxy is: {}", proxy.unwrap().now.unwrap());
-        }
-    }
+    // // Change the proxy node.
+    // if let Ok(mi) = &mihomo {
+    //     let m = mi.read().await;
+    //     let res = m.select_node_for_group("节点选择", "🇸🇬|新加坡-直连").await;
+    //     // let res = m.select_node_for_group("节点选择", "自动选择").await;
+    //     if let Ok(_) = res {
+    //         let proxy = m.get_proxy_by_name("节点选择").await;
+    //         println!("Now the chosen proxy is: {}", proxy.unwrap().now.unwrap());
+    //     }
+    // }
 
     Ok(())
 }

@@ -13,6 +13,7 @@ futures = "0.3.31"
 ratatui = "0.30.0"
 tokio = { version = "1.40.0", features = ["full"] }
 serde_yaml = "0.9"
+unicode-width = "0.2"
 
 thiserror = "2"
 reqwest = { version = "0.12", features = ["json", "gzip", "brotli"] }
