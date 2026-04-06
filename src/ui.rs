@@ -226,18 +226,27 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
             let [list_area, scrollbar_area] =
                 Layout::horizontal([Constraint::Min(0), Constraint::Length(1)])
                     .areas(mainwindow[1]);
-            let index = app.proxies_status.0.selected().unwrap();
-            let proxies_item: Vec<ListItem> = app.proxies_status.3[index]
+            let group_index = app.proxies_status.0.selected().unwrap();
+            let current_group_delay = &app.proxies_status.5[group_index];
+            let proxies_item: Vec<ListItem> = app.proxies_status.3[group_index]
                 .iter()
                 .enumerate()
                 .map(|(i, item)| {
                     let mut style = Style::default();
-                    if i == app.proxies_status.1[index].1 {
+                    if i == app.proxies_status.1[group_index].1 {
                         style = selected_proxy_style;
                     }
                     // ListItem::new(item.clone()).style(style)
                     // let delay = Some(0);
-                    let delay = None;
+                    let delay = if let Some(delay) = current_group_delay {
+                        if let Some(info) = delay.get(item) {
+                            Some(*info as i32)
+                        } else {
+                            Some(-1)
+                        }
+                    } else {
+                        None
+                    };
                     make_item(item, delay, list_area.width).style(style)
                 })
                 .collect();
@@ -251,7 +260,7 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
                 .highlight_symbol(" > ")
                 .scroll_padding(2);
             let scrollbar = Scrollbar::new(ratatui::widgets::ScrollbarOrientation::VerticalRight);
-            let mut scrollbar_state = ScrollbarState::new(app.proxies_status.3[index].len())
+            let mut scrollbar_state = ScrollbarState::new(app.proxies_status.3[group_index].len())
                 .position(app.proxies_status.2.selected().unwrap_or(0));
             frame.render_stateful_widget(proxies, list_area, &mut app.proxies_status.2);
             frame.render_stateful_widget(scrollbar, scrollbar_area, &mut scrollbar_state);
@@ -286,7 +295,7 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
         }
         CurrentPage::Test => {
             frame.render_widget(
-                Paragraph::new("Now it is selecting test.")
+                Paragraph::new(format!("Here is the debug information:\n{}", app.debug))
                     .block(Block::new().borders(Borders::ALL)),
                 layout_root[1],
             );
@@ -314,9 +323,15 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
 }
 
 fn make_item<'a>(name: &'a String, value: Option<i32>, width: u16) -> ListItem<'a> {
+    let mut timeout = false;
     let left = name;
     let right = match value {
-        Some(value) => format!("{}ms", value),
+        Some(value) => {
+            if value == -1 {
+                timeout = true;
+            }
+            format!("{}ms", value)
+        }
         None => format!(""),
     };
 
@@ -329,6 +344,10 @@ fn make_item<'a>(name: &'a String, value: Option<i32>, width: u16) -> ListItem<'
     ListItem::new(Line::from(vec![
         Span::raw(left.to_string()),
         Span::raw(spaces),
-        Span::raw(right).style(Style::default().fg(Color::Green)),
+        Span::raw(right).style(Style::default().fg(if !timeout {
+            Color::Green
+        } else {
+            Color::Red
+        })),
     ]))
 }

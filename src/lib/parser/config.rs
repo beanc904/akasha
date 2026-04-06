@@ -45,4 +45,8 @@ impl MihomoConfig {
         }
         groups
     }
+
+    pub fn get_num_of_groups(&self) -> usize {
+        self.proxy_groups.len()
+    }
 }

@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 
 use crossterm::event::{Event, EventStream, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
@@ -63,6 +63,11 @@ pub struct App {
         ListState,
         Vec<Vec<String>>,
         bool,
+        Vec<Option<HashMap<String, u32>>>,
+        (
+            mpsc::Sender<Option<HashMap<String, u32>>>,
+            mpsc::Receiver<Option<HashMap<String, u32>>>,
+        ),
     ),
 
     // ANCHOR: traffic data
@@ -77,6 +82,7 @@ pub struct App {
     /// It is the unit frame of traffic monitor, and also the x_axis.
     pub tick: f64,
     // ANCHOR_END: traffic data
+    pub debug: String,
 }
 
 impl App {
@@ -139,12 +145,15 @@ impl App {
                 ListState::default().with_selected(Some(0)),
                 mihomo_config.get_proxy_groups_proxies(),
                 false,
+                vec![None; mihomo_config.get_num_of_groups()],
+                mpsc::channel::<Option<HashMap<String, u32>>>(64),
             ),
             traffic_data: VecDeque::default(),
             memory_inuse: 0f64,
             tick: 0f64,
             mihomo_config,
             pkginfo,
+            debug: String::new(),
         }
     }
 
@@ -317,6 +326,37 @@ impl App {
         }
     }
 
+    pub async fn d_hander(&mut self) {
+        match self.sidebar_status.2 {
+            CurrentPage::Dashboard => todo!(),
+            CurrentPage::Proxies => {
+                let mihomo = self.mihomo.clone();
+                let tx_delay = self.proxies_status.6.0.clone();
+                let group_index = self.proxies_status.0.selected().unwrap();
+                let group_name = self.proxies_status.1[group_index].0.clone();
+                let test_url = "https://www.gstatic.com/generate_204".to_string();
+                let timeout = 5000;
+                let keep_fixed = true;
+                tokio::spawn(async move {
+                    let delay =
+                        ac::delay_group(mihomo, group_name.clone(), test_url, timeout, keep_fixed)
+                            .await;
+                    if let Ok(delay) = delay {
+                        let _ = tx_delay.send(Some(delay)).await;
+                    } else {
+                        log::error!("Encountered some problems with {} delay test.", group_name);
+                    }
+                });
+            }
+            CurrentPage::Profiles => todo!(),
+            CurrentPage::Connections => todo!(),
+            CurrentPage::Rules => todo!(),
+            CurrentPage::Logs => todo!(),
+            CurrentPage::Test => todo!(),
+            CurrentPage::Settings => todo!(),
+        }
+    }
+
     /// Run the application's main loop.
     pub async fn run(mut self, mut terminal: DefaultTerminal) -> color_eyre::Result<()> {
         self.running = true;
@@ -404,6 +444,12 @@ impl App {
                         }
                     }
 
+                    // proxies delay info thread recv
+                    if let Ok(value) = self.proxies_status.6.1.try_recv() {
+                        let group_index = self.proxies_status.0.selected().unwrap();
+                        self.proxies_status.5[group_index] = value;
+                    }
+
                     terminal.draw(|frame| crate::ui::draw(&mut self, frame))?;
                     // self.handle_crossterm_events().await?;
                 }
@@ -443,6 +489,7 @@ impl App {
             (_, KeyCode::Char('k')) => self.tab_switch(false),
             (_, KeyCode::Enter) => self.enter_handler().await,
             (_, KeyCode::Char('q')) => self.esc_handler(),
+            (_, KeyCode::Char('d')) => self.d_hander().await,
             // Add other key handlers here.
             _ => {}
         }
