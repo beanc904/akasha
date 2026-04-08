@@ -325,9 +325,9 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
 fn make_item<'a>(name: &'a String, value: Option<i32>, width: u16) -> ListItem<'a> {
     let mut timeout = false;
     let left = name;
-    let right = match value {
+    let right = match &value {
         Some(value) => {
-            if value == -1 {
+            if *value == -1 {
                 timeout = true;
             }
             format!("{}ms", value)
@@ -345,7 +345,18 @@ fn make_item<'a>(name: &'a String, value: Option<i32>, width: u16) -> ListItem<'
         Span::raw(left.to_string()),
         Span::raw(spaces),
         Span::raw(right).style(Style::default().fg(if !timeout {
-            Color::Green
+            match &value {
+                Some(value) => {
+                    if *value < 250 {
+                        Color::Green
+                    } else if *value < 500 {
+                        Color::LightRed
+                    } else {
+                        Color::Blue
+                    }
+                }
+                None => Color::Red,
+            }
         } else {
             Color::Red
         })),

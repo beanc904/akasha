@@ -65,8 +65,8 @@ pub struct App {
         bool,
         Vec<Option<HashMap<String, u32>>>,
         (
-            mpsc::Sender<Option<HashMap<String, u32>>>,
-            mpsc::Receiver<Option<HashMap<String, u32>>>,
+            mpsc::Sender<(Option<HashMap<String, u32>>, usize)>,
+            mpsc::Receiver<(Option<HashMap<String, u32>>, usize)>,
         ),
     ),
 
@@ -146,7 +146,7 @@ impl App {
                 mihomo_config.get_proxy_groups_proxies(),
                 false,
                 vec![None; mihomo_config.get_num_of_groups()],
-                mpsc::channel::<Option<HashMap<String, u32>>>(64),
+                mpsc::channel::<(Option<HashMap<String, u32>>, usize)>(64),
             ),
             traffic_data: VecDeque::default(),
             memory_inuse: 0f64,
@@ -342,7 +342,7 @@ impl App {
                         ac::delay_group(mihomo, group_name.clone(), test_url, timeout, keep_fixed)
                             .await;
                     if let Ok(delay) = delay {
-                        let _ = tx_delay.send(Some(delay)).await;
+                        let _ = tx_delay.send((Some(delay), group_index)).await;
                     } else {
                         log::error!("Encountered some problems with {} delay test.", group_name);
                     }
@@ -446,8 +446,10 @@ impl App {
 
                     // proxies delay info thread recv
                     if let Ok(value) = self.proxies_status.6.1.try_recv() {
-                        let group_index = self.proxies_status.0.selected().unwrap();
-                        self.proxies_status.5[group_index] = value;
+                        // // The index here maybe different from the index of 'd' press time.
+                        // let group_index = self.proxies_status.0.selected().unwrap();
+                        let (msg, group_index) = value;
+                        self.proxies_status.5[group_index] = msg;
                     }
 
                     terminal.draw(|frame| crate::ui::draw(&mut self, frame))?;
