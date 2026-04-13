@@ -10,7 +10,7 @@ use tokio::sync::{RwLock, mpsc};
 use tokio::time::{Duration, interval};
 
 use akasha::client as ac;
-use akasha::parser::config::MihomoConfig;
+use akasha::parser::config::{AkashaConfig, MihomoConfig};
 
 use crate::pkginfo::PkgInfo;
 
@@ -25,16 +25,23 @@ pub enum CurrentPage {
     Settings,
 }
 
-pub enum DashboardTab {
-    Profile,
-    CurrentNode,
-    NetworkSettings,
-    ProxyMode,
-    TrafficStats,
-    WebsiteTests,
-    IpInformation,
-    ClashInfo,
-    SystemInfo,
+pub struct SidebarStatus {
+    pub list_state: ListState,
+    pub list_items: Vec<&'static str>,
+    pub current_page: CurrentPage,
+}
+
+pub struct ProxiesStatus {
+    pub group_state: ListState,
+    pub group_items: Vec<(String, usize)>,
+    pub proxy_state: ListState,
+    pub proxy_items: Vec<Vec<String>>,
+    pub proxy_focus: bool,
+    pub delay: Vec<Option<HashMap<String, u32>>>,
+    pub delay_mpsc: (
+        mpsc::Sender<(Option<HashMap<String, u32>>, usize)>,
+        mpsc::Receiver<(Option<HashMap<String, u32>>, usize)>,
+    ),
 }
 
 // #[derive(Debug, Default)]
@@ -47,28 +54,11 @@ pub struct App {
     pub mihomo: Arc<RwLock<ac::mihomo::Mihomo>>,
     // Mihomo config.yaml
     pub mihomo_config: MihomoConfig,
+    pub akasha_config: AkashaConfig,
     // Package informations.
     pub pkginfo: PkgInfo,
-    // Sidebar selective status.
-    pub sidebar_status: (ListState, Vec<&'static str>, CurrentPage),
-    // Main area select tab.
-    pub dashboard_status: (ListState, Vec<&'static str>, DashboardTab),
-    // (0, 1, 2, 3)
-    // 1: the state of proxy group 2: the (name, selected) of each proxy group
-    // 3: the state of group details 4: the detailed events of each group
-    // 5: is focus of the selected proxy group
-    pub proxies_status: (
-        ListState,
-        Vec<(String, usize)>,
-        ListState,
-        Vec<Vec<String>>,
-        bool,
-        Vec<Option<HashMap<String, u32>>>,
-        (
-            mpsc::Sender<(Option<HashMap<String, u32>>, usize)>,
-            mpsc::Receiver<(Option<HashMap<String, u32>>, usize)>,
-        ),
-    ),
+    pub sidebar_status: SidebarStatus,
+    pub proxies_status: ProxiesStatus,
 
     // ANCHOR: traffic data
     /// The touple signature is (tick, up, down, upTotal, downTotal). (unit: bps)
@@ -89,7 +79,8 @@ impl App {
     /// Construct a new instance of [`App`].
     pub fn new() -> Self {
         let pkginfo = PkgInfo::new();
-        let mihomo_config = MihomoConfig::new("resources/config.yaml").unwrap();
+        let mihomo_config = MihomoConfig::new(pkginfo.get_mihomo_config()).unwrap();
+        let akasha_config = AkashaConfig::new(pkginfo.get_akasha_config()).unwrap();
         App {
             running: true,
             event_stream: EventStream::default(),
@@ -106,9 +97,9 @@ impl App {
                 )
                 .build()
                 .unwrap(),
-            sidebar_status: (
-                ListState::default().with_selected(Some(0)),
-                vec![
+            sidebar_status: SidebarStatus {
+                list_state: ListState::default().with_selected(Some(0)),
+                list_items: vec![
                     "Dashboard",
                     "Proxies",
                     "Profiles",
@@ -118,40 +109,26 @@ impl App {
                     "Test",
                     "Settings",
                 ],
-                CurrentPage::Dashboard,
-            ),
-            dashboard_status: (
-                ListState::default().with_selected(Some(0)),
-                vec![
-                    "Profile",
-                    "Current Node",
-                    "Network Settings",
-                    "Proxy Mode",
-                    "Traffic Stats",
-                    "Website Tests",
-                    "IP Information",
-                    "Clash Info",
-                    "System Info",
-                ],
-                DashboardTab::Profile,
-            ),
-            proxies_status: (
-                ListState::default().with_selected(Some(0)),
-                mihomo_config
+                current_page: CurrentPage::Dashboard,
+            },
+            proxies_status: ProxiesStatus {
+                group_state: ListState::default().with_selected(Some(0)),
+                group_items: mihomo_config
                     .get_proxy_groups_namevec()
                     .into_iter()
                     .map(|name| (name, 0))
                     .collect(),
-                ListState::default().with_selected(Some(0)),
-                mihomo_config.get_proxy_groups_proxies(),
-                false,
-                vec![None; mihomo_config.get_num_of_groups()],
-                mpsc::channel::<(Option<HashMap<String, u32>>, usize)>(64),
-            ),
+                proxy_state: ListState::default().with_selected(Some(0)),
+                proxy_items: mihomo_config.get_proxy_groups_proxies(),
+                proxy_focus: false,
+                delay: vec![None; mihomo_config.get_num_of_groups()],
+                delay_mpsc: mpsc::channel::<(Option<HashMap<String, u32>>, usize)>(64),
+            },
             traffic_data: VecDeque::default(),
             memory_inuse: 0f64,
             tick: 0f64,
             mihomo_config,
+            akasha_config,
             pkginfo,
             debug: String::new(),
         }
@@ -160,31 +137,17 @@ impl App {
     /// You must use it after finishing selecting the current page.
     /// Sync the status of enumeration and liststate.
     fn update_liststate_status(&mut self) {
-        match self.sidebar_status.0.selected() {
-            Some(0) => self.sidebar_status.2 = CurrentPage::Dashboard,
-            Some(1) => self.sidebar_status.2 = CurrentPage::Proxies,
-            Some(2) => self.sidebar_status.2 = CurrentPage::Profiles,
-            Some(3) => self.sidebar_status.2 = CurrentPage::Connections,
-            Some(4) => self.sidebar_status.2 = CurrentPage::Rules,
-            Some(5) => self.sidebar_status.2 = CurrentPage::Logs,
-            Some(6) => self.sidebar_status.2 = CurrentPage::Test,
-            Some(7) => self.sidebar_status.2 = CurrentPage::Settings,
+        match self.sidebar_status.list_state.selected() {
+            Some(0) => self.sidebar_status.current_page = CurrentPage::Dashboard,
+            Some(1) => self.sidebar_status.current_page = CurrentPage::Proxies,
+            Some(2) => self.sidebar_status.current_page = CurrentPage::Profiles,
+            Some(3) => self.sidebar_status.current_page = CurrentPage::Connections,
+            Some(4) => self.sidebar_status.current_page = CurrentPage::Rules,
+            Some(5) => self.sidebar_status.current_page = CurrentPage::Logs,
+            Some(6) => self.sidebar_status.current_page = CurrentPage::Test,
+            Some(7) => self.sidebar_status.current_page = CurrentPage::Settings,
             Some(_) => log::error!("Switching over array bound!"),
             None => log::error!("There is something wrong with switching page."),
-        }
-
-        match self.dashboard_status.0.selected() {
-            Some(0) => self.dashboard_status.2 = DashboardTab::Profile,
-            Some(1) => self.dashboard_status.2 = DashboardTab::CurrentNode,
-            Some(2) => self.dashboard_status.2 = DashboardTab::NetworkSettings,
-            Some(3) => self.dashboard_status.2 = DashboardTab::ProxyMode,
-            Some(4) => self.dashboard_status.2 = DashboardTab::TrafficStats,
-            Some(5) => self.dashboard_status.2 = DashboardTab::WebsiteTests,
-            Some(6) => self.dashboard_status.2 = DashboardTab::IpInformation,
-            Some(7) => self.dashboard_status.2 = DashboardTab::ClashInfo,
-            Some(8) => self.dashboard_status.2 = DashboardTab::SystemInfo,
-            Some(_) => log::error!("Switching over array bound!"),
-            None => log::error!("There is something wrong with switching dashboard tab."),
         }
     }
 
@@ -224,8 +187,8 @@ impl App {
     pub fn sidebar_next(&mut self) {
         App::liststate_switch(
             true,
-            &mut self.sidebar_status.0,
-            self.sidebar_status.1.len(),
+            &mut self.sidebar_status.list_state,
+            self.sidebar_status.list_items.len(),
         );
         self.update_liststate_status();
     }
@@ -233,41 +196,34 @@ impl App {
     pub fn sidebar_previous(&mut self) {
         App::liststate_switch(
             false,
-            &mut self.sidebar_status.0,
-            self.sidebar_status.1.len(),
+            &mut self.sidebar_status.list_state,
+            self.sidebar_status.list_items.len(),
         );
         self.update_liststate_status();
     }
 
     pub fn tab_switch(&mut self, is_next: bool) {
-        match self.sidebar_status.2 {
-            CurrentPage::Dashboard => {
-                App::liststate_switch(
-                    is_next,
-                    &mut self.dashboard_status.0,
-                    self.dashboard_status.1.len(),
-                );
-                self.update_liststate_status();
-            }
+        match self.sidebar_status.current_page {
+            CurrentPage::Dashboard => todo!(),
             CurrentPage::Proxies => {
-                if !self.proxies_status.4 {
+                if !self.proxies_status.proxy_focus {
                     // Now the focus is the groups list.
                     App::liststate_switch(
                         is_next,
-                        &mut self.proxies_status.0,
-                        self.proxies_status.1.len(),
+                        &mut self.proxies_status.group_state,
+                        self.proxies_status.group_items.len(),
                     );
                     // // It seems that it does not need to update enumeration.
                     // self.update_liststate_status();
                     // Reset the selected proxy item, each time switch the groups tab.
-                    self.proxies_status.2.select(Some(0));
+                    self.proxies_status.proxy_state.select(Some(0));
                 } else {
                     // Now the focus is the details list.
-                    let index = self.proxies_status.0.selected().unwrap();
+                    let index = self.proxies_status.group_state.selected().unwrap();
                     App::liststate_switch(
                         is_next,
-                        &mut self.proxies_status.2,
-                        self.proxies_status.3[index].len(),
+                        &mut self.proxies_status.proxy_state,
+                        self.proxies_status.proxy_items[index].len(),
                     );
                 }
             }
@@ -281,17 +237,17 @@ impl App {
     }
 
     pub async fn enter_handler(&mut self) {
-        match self.sidebar_status.2 {
+        match self.sidebar_status.current_page {
             CurrentPage::Dashboard => todo!(),
             CurrentPage::Proxies => {
-                if self.proxies_status.4 {
+                if self.proxies_status.proxy_focus {
                     // Cursor at details
-                    let index_group = self.proxies_status.0.selected().unwrap();
-                    let index_proxy = self.proxies_status.2.selected().unwrap();
-                    self.proxies_status.1[index_group].1 = index_proxy;
+                    let index_group = self.proxies_status.group_state.selected().unwrap();
+                    let index_proxy = self.proxies_status.proxy_state.selected().unwrap();
+                    self.proxies_status.group_items[index_group].1 = index_proxy;
 
-                    let name_group = &self.proxies_status.1[index_group].0;
-                    let name_proxy = &self.proxies_status.3[index_group][index_proxy];
+                    let name_group = &self.proxies_status.group_items[index_group].0;
+                    let name_proxy = &self.proxies_status.proxy_items[index_group][index_proxy];
 
                     let mihomo = self.mihomo.clone();
                     let mi = mihomo.read().await;
@@ -299,7 +255,7 @@ impl App {
                     let _ = mi.select_node_for_group(name_group, name_proxy).await;
                 } else {
                     // Cursor at tabs
-                    self.proxies_status.4 = true;
+                    self.proxies_status.proxy_focus = true;
                 }
             }
             CurrentPage::Profiles => todo!(),
@@ -312,10 +268,10 @@ impl App {
     }
 
     pub fn esc_handler(&mut self) {
-        match self.sidebar_status.2 {
+        match self.sidebar_status.current_page {
             CurrentPage::Dashboard => todo!(),
             CurrentPage::Proxies => {
-                self.proxies_status.4 = false;
+                self.proxies_status.proxy_focus = false;
             }
             CurrentPage::Profiles => todo!(),
             CurrentPage::Connections => todo!(),
@@ -327,13 +283,13 @@ impl App {
     }
 
     pub async fn d_hander(&mut self) {
-        match self.sidebar_status.2 {
+        match self.sidebar_status.current_page {
             CurrentPage::Dashboard => todo!(),
             CurrentPage::Proxies => {
                 let mihomo = self.mihomo.clone();
-                let tx_delay = self.proxies_status.6.0.clone();
-                let group_index = self.proxies_status.0.selected().unwrap();
-                let group_name = self.proxies_status.1[group_index].0.clone();
+                let tx_delay = self.proxies_status.delay_mpsc.0.clone();
+                let group_index = self.proxies_status.group_state.selected().unwrap();
+                let group_name = self.proxies_status.group_items[group_index].0.clone();
                 let test_url = "https://www.gstatic.com/generate_204".to_string();
                 let timeout = 5000;
                 let keep_fixed = true;
@@ -375,8 +331,8 @@ impl App {
         // ANCHOR: setup the group and proxy selected status in ui
         let (tx_proxies, mut rx_proxies) = mpsc::channel::<Vec<usize>>(64);
         let mihomo_proxies = self.mihomo.clone();
-        let proxy_group = self.proxies_status.1.clone();
-        let proxy_items = self.proxies_status.3.clone();
+        let proxy_group = self.proxies_status.group_items.clone();
+        let proxy_items = self.proxies_status.proxy_items.clone();
         // Set the interval of the proxy async check task.
         let mut ticker_proxy_task = interval(Duration::from_secs(5));
         tokio::spawn(async move {
@@ -435,9 +391,9 @@ impl App {
                     // proxies selected status thread recv
                     if let Ok(value) = rx_proxies.try_recv() {
                         log::trace!("Proxies Groups selected status: {:?}", value);
-                        if value.len() == self.proxies_status.1.len() {
+                        if value.len() == self.proxies_status.group_items.len() {
                             for (i, index) in value.iter().enumerate() {
-                                self.proxies_status.1[i].1 = *index;
+                                self.proxies_status.group_items[i].1 = *index;
                             }
                         } else {
                             panic!("There is something wrong with group size.");
@@ -445,11 +401,11 @@ impl App {
                     }
 
                     // proxies delay info thread recv
-                    if let Ok(value) = self.proxies_status.6.1.try_recv() {
+                    if let Ok(value) = self.proxies_status.delay_mpsc.1.try_recv() {
                         // // The index here maybe different from the index of 'd' press time.
-                        // let group_index = self.proxies_status.0.selected().unwrap();
+                        // let group_index = self.proxies_status.group_state.selected().unwrap();
                         let (msg, group_index) = value;
-                        self.proxies_status.5[group_index] = msg;
+                        self.proxies_status.delay[group_index] = msg;
                     }
 
                     terminal.draw(|frame| crate::ui::draw(&mut self, frame))?;
@@ -483,14 +439,14 @@ impl App {
     /// Handles the key events and updates the state of [`App`].
     async fn on_key_event(&mut self, key: KeyEvent) {
         match (key.modifiers, key.code) {
-            (_, KeyCode::Esc)
+            (_, KeyCode::Char('q'))
             | (KeyModifiers::CONTROL, KeyCode::Char('c') | KeyCode::Char('C')) => self.quit(),
             (_, KeyCode::Tab) => self.sidebar_next(),
             (_, KeyCode::BackTab) => self.sidebar_previous(),
             (_, KeyCode::Char('j')) => self.tab_switch(true),
             (_, KeyCode::Char('k')) => self.tab_switch(false),
             (_, KeyCode::Enter) => self.enter_handler().await,
-            (_, KeyCode::Char('q')) => self.esc_handler(),
+            (_, KeyCode::Esc) => self.esc_handler(),
             (_, KeyCode::Char('d')) => self.d_hander().await,
             // Add other key handlers here.
             _ => {}

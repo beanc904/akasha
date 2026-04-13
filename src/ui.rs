@@ -133,7 +133,7 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
 
     let sidebar_items: Vec<ListItem> = app
         .sidebar_status
-        .1
+        .list_items
         .iter()
         .map(|i| ListItem::new(*i).style(Style::default().fg(Color::White)))
         .collect();
@@ -156,36 +156,51 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
         .bg(Color::White)
         .fg(Color::DarkGray)
         .add_modifier(Modifier::BOLD);
-    match app.sidebar_status.2 {
+    match app.sidebar_status.current_page {
         CurrentPage::Dashboard => {
-            let block = Block::default().borders(Borders::ALL).title(" Dashboard ");
-            let block_inner = block.inner(layout_root[1]);
-            let mainwindow = Layout::default()
-                .direction(Direction::Horizontal)
-                .constraints(vec![Constraint::Length(20), Constraint::Min(0)])
-                .split(block_inner);
-            frame.render_widget(block, layout_root[1]);
+            let root_block = Block::default().borders(Borders::ALL).title(" Dashboard ");
+            let root_inner = root_block.inner(layout_root[1]);
+            frame.render_widget(root_block, layout_root[1]);
 
-            let tab_items: Vec<ListItem> = app
-                .dashboard_status
-                .1
+            let titles = [
+                " SakuraCat ",
+                " CurrentNode ",
+                " NetworkSettings ",
+                " ProxyMode ",
+                " TrafficStats ",
+                " WebsiteTests ",
+                " IpInformation ",
+                " ClashInfo ",
+                " SystemInfo ",
+            ];
+            let title_lines: Vec<Line> = titles
                 .iter()
-                .map(|i| ListItem::new(*i).style(Style::default()))
+                .map(|title| Line::from(format!(">>>{}<<<", title)).bg(Color::DarkGray))
                 .collect();
-            let tab = List::new(tab_items)
-                .block(
-                    Block::default()
-                        .title(" Tabs(J/K) ")
-                        .borders(Borders::RIGHT),
-                )
-                .highlight_style(selected_tab_style)
-                .highlight_symbol(" * ");
-            frame.render_stateful_widget(tab, mainwindow[0], &mut app.dashboard_status.0);
+
+            let paragraph = Paragraph::new(vec![
+                title_lines[0].clone(),
+                Line::from(format!("From: {}", app.akasha_config.subscription_link)),
+                Line::from(format!("Update Time: {}", "2026-04-13 09:27")),
+                Line::from(format!("Used/Total: {}", "3.20GB / 260GB")),
+                title_lines[1].clone(),
+                Line::from(format!("Selected: {}", "")),
+                Line::from(vec!["Delay: ".into(), "ms".into()]),
+                title_lines[2].clone(),
+                title_lines[3].clone(),
+                title_lines[4].clone(),
+                title_lines[5].clone(),
+                title_lines[6].clone(),
+                title_lines[7].clone(),
+                title_lines[8].clone(),
+            ]);
+
+            frame.render_widget(paragraph, root_inner);
         }
         CurrentPage::Proxies => {
             let block = Block::default()
                 .borders(Borders::ALL)
-                .title(" Proxies(Enter/Q) ");
+                .title(" Proxies(Enter/Esc) ");
             let block_inner = block.inner(layout_root[1]);
             let mainwindow = Layout::default()
                 .direction(Direction::Horizontal)
@@ -199,12 +214,12 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
                 .add_modifier(Modifier::BOLD);
             let tab_items: Vec<ListItem> = app
                 .proxies_status
-                .1
+                .group_items
                 .iter()
                 .enumerate()
                 .map(|(i, item)| {
-                    let index = app.proxies_status.1[i].1;
-                    let selected_proxy_name = &app.proxies_status.3[i][index];
+                    let index = app.proxies_status.group_items[i].1;
+                    let selected_proxy_name = &app.proxies_status.proxy_items[i][index];
                     ListItem::new(format!("{}\n({})", item.0, selected_proxy_name))
                         .style(Style::default())
                 })
@@ -212,7 +227,7 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
             let tab = List::new(tab_items)
                 .block(
                     Block::default()
-                        .title(if app.proxies_status.4 {
+                        .title(if app.proxies_status.proxy_focus {
                             " Tabs(J/K) ".fg(Color::White)
                         } else {
                             " Tabs(J/K) ".fg(Color::Yellow)
@@ -221,19 +236,19 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
                 )
                 .highlight_style(selected_tab_style)
                 .highlight_symbol(" * ");
-            frame.render_stateful_widget(tab, mainwindow[0], &mut app.proxies_status.0);
+            frame.render_stateful_widget(tab, mainwindow[0], &mut app.proxies_status.group_state);
 
             let [list_area, scrollbar_area] =
                 Layout::horizontal([Constraint::Min(0), Constraint::Length(1)])
                     .areas(mainwindow[1]);
-            let group_index = app.proxies_status.0.selected().unwrap();
-            let current_group_delay = &app.proxies_status.5[group_index];
-            let proxies_item: Vec<ListItem> = app.proxies_status.3[group_index]
+            let group_index = app.proxies_status.group_state.selected().unwrap();
+            let current_group_delay = &app.proxies_status.delay[group_index];
+            let proxies_item: Vec<ListItem> = app.proxies_status.proxy_items[group_index]
                 .iter()
                 .enumerate()
                 .map(|(i, item)| {
                     let mut style = Style::default();
-                    if i == app.proxies_status.1[group_index].1 {
+                    if i == app.proxies_status.group_items[group_index].1 {
                         style = selected_proxy_style;
                     }
                     // ListItem::new(item.clone()).style(style)
@@ -251,7 +266,7 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
                 })
                 .collect();
             let proxies = List::new(proxies_item)
-                .block(Block::default().title(if app.proxies_status.4 {
+                .block(Block::default().title(if app.proxies_status.proxy_focus {
                     " Proxies(J/K) ".fg(Color::Yellow)
                 } else {
                     " Proxies(J/K) ".fg(Color::White)
@@ -260,9 +275,10 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
                 .highlight_symbol(" > ")
                 .scroll_padding(2);
             let scrollbar = Scrollbar::new(ratatui::widgets::ScrollbarOrientation::VerticalRight);
-            let mut scrollbar_state = ScrollbarState::new(app.proxies_status.3[group_index].len())
-                .position(app.proxies_status.2.selected().unwrap_or(0));
-            frame.render_stateful_widget(proxies, list_area, &mut app.proxies_status.2);
+            let mut scrollbar_state =
+                ScrollbarState::new(app.proxies_status.proxy_items[group_index].len())
+                    .position(app.proxies_status.proxy_state.selected().unwrap_or(0));
+            frame.render_stateful_widget(proxies, list_area, &mut app.proxies_status.proxy_state);
             frame.render_stateful_widget(scrollbar, scrollbar_area, &mut scrollbar_state);
         }
         CurrentPage::Profiles => {
@@ -317,7 +333,11 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
         .block(Block::new().borders(Borders::ALL)),
         layout_sidebar[0],
     );
-    frame.render_stateful_widget(sidebar, layout_sidebar[1], &mut app.sidebar_status.0);
+    frame.render_stateful_widget(
+        sidebar,
+        layout_sidebar[1],
+        &mut app.sidebar_status.list_state,
+    );
     frame.render_widget(chart_traffic_monitor, layout_monitor[0]);
     frame.render_widget(Paragraph::new(traffic_info), layout_monitor[1]);
 }
@@ -350,9 +370,9 @@ fn make_item<'a>(name: &'a String, value: Option<i32>, width: u16) -> ListItem<'
                     if *value < 250 {
                         Color::Green
                     } else if *value < 500 {
-                        Color::LightRed
-                    } else {
                         Color::Blue
+                    } else {
+                        Color::LightRed
                     }
                 }
                 None => Color::Red,

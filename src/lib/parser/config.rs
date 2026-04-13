@@ -1,7 +1,7 @@
 /// Just using std file read is ok.
 /// If there is something wrong with config read,
 /// the whole process can not be initialized currectly.
-use std::{error::Error, fs::File, io::Read};
+use std::{error::Error, fs::File, io::Read, path::Path};
 
 use serde::Deserialize;
 
@@ -22,7 +22,11 @@ pub struct ProxyGroup {
 }
 
 impl MihomoConfig {
-    pub fn new(path: &'static str) -> Result<Self, Box<dyn Error>> {
+    pub fn new<P>(path: P) -> Result<Self, Box<dyn Error>>
+    where
+        P: AsRef<Path>,
+    {
+        let path = path.as_ref();
         let mut file = File::open(path)?;
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
@@ -48,5 +52,25 @@ impl MihomoConfig {
 
     pub fn get_num_of_groups(&self) -> usize {
         self.proxy_groups.len()
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AkashaConfig {
+    #[serde(rename = "subscription-link")]
+    pub subscription_link: String,
+}
+
+impl AkashaConfig {
+    pub fn new<P>(path: P) -> Result<Self, Box<dyn Error>>
+    where
+        P: AsRef<Path>,
+    {
+        let path = path.as_ref();
+        let mut file = File::open(path)?;
+        let mut contents = String::new();
+        file.read_to_string(&mut contents)?;
+        let config = toml::from_str(&contents)?;
+        Ok(config)
     }
 }

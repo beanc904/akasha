@@ -1,5 +1,7 @@
 /target
 /debug
+/configs
 config.yaml
 clash-verge.yaml
+akasha.toml
 .env
