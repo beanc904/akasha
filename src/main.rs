@@ -1,6 +1,5 @@
 pub mod app;
 pub mod pkginfo;
-pub mod ui;
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
