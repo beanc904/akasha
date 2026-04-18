@@ -1,0 +1,4 @@
+[ERROR test] database connection retry #1 failed
+[ERROR test] request id=1003 failed: timeout
+[ERROR test] login failed: invalid password
+[ERROR test] disk write failed: no space left

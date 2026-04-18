@@ -1,0 +1,8 @@
+[WARN test] database response slow: 120ms
+[ERROR test] database connection retry #1 failed
+[WARN test] request id=1002 took longer than expected
+[ERROR test] request id=1003 failed: timeout
+[WARN test] sync delayed due to network instability
+[ERROR test] login failed: invalid password
+[WARN test] disk usage at 85%
+[ERROR test] disk write failed: no space left

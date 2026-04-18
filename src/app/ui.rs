@@ -1,7 +1,9 @@
 mod dashboard;
+mod logs;
 mod proxies;
 mod sidebar;
 use dashboard::*;
+use logs::*;
 use proxies::*;
 use sidebar::*;
 
@@ -53,15 +55,11 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
             );
         }
         CurrentPage::Logs => {
-            frame.render_widget(
-                Paragraph::new("Now it is selecting logs.")
-                    .block(Block::new().borders(Borders::ALL)),
-                layout_root[1],
-            );
+            render_logs(app, frame, &layout_root);
         }
         CurrentPage::Test => {
             frame.render_widget(
-                Paragraph::new(format!("Here is the debug information:\n{}", app.debug))
+                Paragraph::new(format!("Here is the debug information:\n{}", "debug"))
                     .block(Block::new().borders(Borders::ALL)),
                 layout_root[1],
             );

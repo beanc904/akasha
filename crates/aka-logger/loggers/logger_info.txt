@@ -1,0 +1,25 @@
+[INFO test] application started
+[INFO test] connecting to database
+[WARN test] database response slow: 120ms
+[ERROR test] database connection retry #1 failed
+[INFO test] retrying connection
+[INFO test] database connected successfully
+[INFO test] processing request id=1001
+[INFO test] request id=1001 completed
+[INFO test] processing request id=1002
+[WARN test] request id=1002 took longer than expected
+[INFO test] request id=1002 completed
+[INFO test] processing request id=1003
+[ERROR test] request id=1003 failed: timeout
+[INFO test] starting background sync task
+[WARN test] sync delayed due to network instability
+[INFO test] user login attempt user=admin
+[ERROR test] login failed: invalid password
+[INFO test] user login attempt user=guest
+[INFO test] login success user=guest
+[INFO test] writing data to disk
+[WARN test] disk usage at 85%
+[ERROR test] disk write failed: no space left
+[INFO test] rotating logs
+[INFO test] shutting down worker threads
+[INFO test] application shutting down

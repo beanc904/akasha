@@ -27,9 +27,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "aka-logger"
+version = "0.1.0"
+dependencies = [
+ "log",
+]
+
+[[package]]
 name = "akasha"
 version = "0.1.0"
 dependencies = [
+ "aka-logger",
  "async-trait",
  "base64",
  "chrono",

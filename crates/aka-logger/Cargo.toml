@@ -1,0 +1,21 @@
+[package]
+authors = [ "Coffee Bean <beanc904@gmail.com>" ]
+name = "aka-logger"
+version = "0.1.0"
+edition = "2024"
+license = "GPL-3.0-or-later"
+
+[dependencies]
+log = { version = "0.4", features = ["std"] }
+
+# optional deps
+env_logger = { version = "0.11", optional = true }
+ratatui = { version = "0.26", optional = true }
+
+[features]
+# default = ["export"]
+default = []
+
+# tui = ["dep:ratatui"]
+env-forward = ["dep:env_logger"]
+export = []

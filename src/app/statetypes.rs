@@ -161,3 +161,59 @@ impl ProxiesStatus {
         });
     }
 }
+
+struct LogsStatus {
+    log_state: Arc<LogStore>,
+    scrollbar_pos: (usize, usize),
+    step_len: usize,
+}
+
+impl LogsStatus {
+    fn get_all(&self) -> Vec<String> {
+        self.log_state.all()
+    }
+
+    fn get_all_len(&self) -> usize {
+        self.log_state.all_len()
+    }
+
+    fn get_scrollbar_pos(&self) -> (usize, usize) {
+        self.scrollbar_pos
+    }
+
+    fn j_handler(&mut self) {
+        let max = self.get_all_len() - 1;
+        let step = self.step_len;
+        let pos = &mut self.scrollbar_pos.0;
+        if *pos >= max {
+            *pos = 0;
+        } else {
+            *pos += step;
+        }
+    }
+
+    fn k_handler(&mut self) {
+        let max = self.get_all_len() - 1;
+        let step = self.step_len;
+        let pos = &mut self.scrollbar_pos.0;
+        if *pos == 0 || (*pos as i32 - step as i32) < 0 {
+            *pos = max - step;
+        } else {
+            *pos -= step;
+        }
+    }
+
+    fn h_handler(&mut self) {
+        let step = self.step_len;
+        let pos = &mut self.scrollbar_pos.1;
+        if *pos != 0 {
+            *pos -= step;
+        }
+    }
+
+    fn l_handler(&mut self) {
+        let step = self.step_len;
+        let pos = &mut self.scrollbar_pos.1;
+        *pos += step;
+    }
+}

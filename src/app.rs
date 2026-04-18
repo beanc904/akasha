@@ -1,12 +1,15 @@
 mod ui;
 
 use std::collections::{HashMap, VecDeque};
+use std::path::PathBuf;
 use std::sync::Arc;
 
+use aka_logger::{AkaLogger, LogStore, LoggerConfig};
 use akasha::client::mihomo::Mihomo;
 use akasha::parser::request::SubscriptionInfo;
 use crossterm::event::{Event, EventStream, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use futures::StreamExt;
+use log::LevelFilter;
 use ratatui::DefaultTerminal;
 use ratatui::widgets::ListState;
 use serde_json::Value;
@@ -35,6 +38,7 @@ pub struct App {
     subscription_info: Option<SubscriptionInfo>,
     sidebar_status: SidebarStatus,
     proxies_status: ProxiesStatus,
+    logs_status: LogsStatus,
 
     // ANCHOR: traffic data
     /// The touple signature is (tick, up, down, upTotal, downTotal). (unit: bps)
@@ -48,7 +52,6 @@ pub struct App {
     /// It is the unit frame of traffic monitor, and also the x_axis.
     tick: f64,
     // ANCHOR_END: traffic data
-    debug: String,
 }
 
 impl App {
@@ -100,13 +103,22 @@ impl App {
                 delay: vec![None; mihomo_config.get_num_of_groups()],
                 delay_mpsc: mpsc::channel::<(Option<HashMap<String, u32>>, usize)>(64),
             },
+            logs_status: LogsStatus {
+                log_state: AkaLogger::init(LoggerConfig {
+                    buf_capacity: 10,
+                    level: LevelFilter::Debug,
+                    with_stdout: true,
+                    log_path: PathBuf::from("debug/debug.log").into_boxed_path(),
+                }),
+                scrollbar_pos: (0, 0),
+                step_len: 3,
+            },
             traffic_data: VecDeque::default(),
             memory_inuse: 0f64,
             tick: 0f64,
             akasha_config,
             pkginfo,
             subscription_info: None,
-            debug: String::new(),
         }
     }
 
@@ -144,7 +156,7 @@ impl App {
             CurrentPage::Profiles => todo!(),
             CurrentPage::Connections => todo!(),
             CurrentPage::Rules => todo!(),
-            CurrentPage::Logs => todo!(),
+            CurrentPage::Logs => self.logs_status.l_handler(),
             CurrentPage::Test => todo!(),
             CurrentPage::Settings => todo!(),
         }
@@ -157,7 +169,33 @@ impl App {
             CurrentPage::Profiles => todo!(),
             CurrentPage::Connections => todo!(),
             CurrentPage::Rules => todo!(),
-            CurrentPage::Logs => todo!(),
+            CurrentPage::Logs => self.logs_status.h_handler(),
+            CurrentPage::Test => todo!(),
+            CurrentPage::Settings => todo!(),
+        }
+    }
+
+    fn j_handler(&mut self) {
+        match self.sidebar_status.current_page {
+            CurrentPage::Dashboard => todo!(),
+            CurrentPage::Proxies => self.proxies_status.tab_switch(true),
+            CurrentPage::Profiles => todo!(),
+            CurrentPage::Connections => todo!(),
+            CurrentPage::Rules => todo!(),
+            CurrentPage::Logs => self.logs_status.j_handler(),
+            CurrentPage::Test => todo!(),
+            CurrentPage::Settings => todo!(),
+        }
+    }
+
+    fn k_handler(&mut self) {
+        match self.sidebar_status.current_page {
+            CurrentPage::Dashboard => todo!(),
+            CurrentPage::Proxies => self.proxies_status.tab_switch(false),
+            CurrentPage::Profiles => todo!(),
+            CurrentPage::Connections => todo!(),
+            CurrentPage::Rules => todo!(),
+            CurrentPage::Logs => self.logs_status.k_handler(),
             CurrentPage::Test => todo!(),
             CurrentPage::Settings => todo!(),
         }
@@ -326,8 +364,8 @@ impl App {
             | (KeyModifiers::CONTROL, KeyCode::Char('c') | KeyCode::Char('C')) => self.quit(),
             (_, KeyCode::Tab) => self.sidebar_status.sidebar_next(),
             (_, KeyCode::BackTab) => self.sidebar_status.sidebar_previous(),
-            (_, KeyCode::Char('j')) => self.proxies_status.tab_switch(true),
-            (_, KeyCode::Char('k')) => self.proxies_status.tab_switch(false),
+            (_, KeyCode::Char('j')) => self.j_handler(),
+            (_, KeyCode::Char('k')) => self.k_handler(),
             (_, KeyCode::Char('h')) => self.h_handler(),
             (_, KeyCode::Char('l')) => self.l_handler(),
             (_, KeyCode::Enter) => self.enter_handler().await,
