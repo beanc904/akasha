@@ -21,7 +21,9 @@ fn main() {
 
     generate_test_logs();
 
-    let logs = store.all();
+    let mut logs = store.get_inner().read().unwrap().clone();
+    let buffer = store.buf_all();
+    logs.extend(buffer);
     println!(">>> All log is: <<<");
     println!("{:?}", logs);
     println!("length of logs: {:?}", logs.len());

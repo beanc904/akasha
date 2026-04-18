@@ -40,27 +40,36 @@ impl LogStore {
     }
 
     pub fn push(&self, line: String) {
+        let buf_len = self.buffer.write().unwrap().len();
+
+        if buf_len >= self.capacity {
+            self.flush();
+        }
+
+        self.buffer.write().unwrap().push_back(line);
+    }
+
+    /// Attention!
+    /// You must not retain the lock of `buffer` and `inner`,
+    /// before invoke `flush()` in the same local area.
+    fn flush(&self) {
         let mut buf = self.buffer.write().unwrap();
         let mut inner = self.inner.write().unwrap();
 
-        if buf.len() >= self.capacity {
-            let buffer = buf.drain(..).collect::<Vec<String>>();
-            inner.extend_from_slice(&buffer);
+        let buffer = buf.drain(..).collect::<Vec<String>>();
+        inner.extend_from_slice(&buffer);
 
-            #[cfg(feature = "export")]
-            {
-                let mut file = File::options()
-                    .append(true)
-                    .create(true)
-                    .open(&self.log_path)
-                    .unwrap();
-                for line in buffer {
-                    writeln!(file, "{}", line).unwrap();
-                }
+        #[cfg(feature = "export")]
+        {
+            let mut file = File::options()
+                .append(true)
+                .create(true)
+                .open(&self.log_path)
+                .unwrap();
+            for line in buffer {
+                writeln!(file, "{}", line).unwrap();
             }
         }
-
-        buf.push_back(line);
     }
 
     pub fn buf_tail(&self, n: usize) -> Vec<String> {
@@ -76,18 +85,15 @@ impl LogStore {
         self.buffer.write().unwrap().clear();
     }
 
-    pub fn tail(&self, n: usize) -> Vec<String> {
+    pub fn inner_tail(&self, n: usize) -> Vec<String> {
         let inner = self.inner.read().unwrap();
         let start_idx = inner.len() - n;
         let end_idx = inner.len() + 1;
         inner.get(start_idx..end_idx).unwrap().into()
     }
 
-    pub fn all(&self) -> Vec<String> {
-        let buf = self.buffer.read().unwrap().clone();
-        let mut inner = self.inner.read().unwrap().clone();
-        inner.extend(buf);
-        inner
+    pub fn get_inner(&self) -> Arc<RwLock<Vec<String>>> {
+        self.inner.clone()
     }
 
     pub fn all_len(&self) -> usize {
@@ -100,16 +106,6 @@ impl LogStore {
 #[cfg(feature = "export")]
 impl Drop for LogStore {
     fn drop(&mut self) {
-        let buf = self.buffer.write().unwrap();
-        if buf.len() < self.capacity {
-            let mut file = File::options()
-                .append(true)
-                .create(true)
-                .open(&self.log_path)
-                .unwrap();
-            for line in buf.iter().cloned().collect::<Vec<String>>() {
-                writeln!(file, "{}", line).unwrap();
-            }
-        }
+        self.flush();
     }
 }

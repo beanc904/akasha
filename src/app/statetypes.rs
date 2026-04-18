@@ -169,8 +169,8 @@ struct LogsStatus {
 }
 
 impl LogsStatus {
-    fn get_all(&self) -> Vec<String> {
-        self.log_state.all()
+    fn get_inner(&self) -> Arc<std::sync::RwLock<Vec<String>>> {
+        self.log_state.get_inner()
     }
 
     fn get_all_len(&self) -> usize {
