@@ -6,6 +6,7 @@ edition = "2024"
 license = "GPL-3.0-or-later"
 
 [dependencies]
+chrono = "0.4.44"
 color-eyre = "0.6.3"
 crossterm = { version = "0.28.1", features = ["event-stream"] }
 dirs = "5.0"

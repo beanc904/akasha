@@ -4,6 +4,7 @@ use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 
 use akasha::client::mihomo::Mihomo;
+use akasha::parser::request::SubscriptionInfo;
 use crossterm::event::{Event, EventStream, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use futures::StreamExt;
 use ratatui::DefaultTerminal;
@@ -31,6 +32,7 @@ pub struct App {
     akasha_config: AkashaConfig,
     // Package informations.
     pkginfo: PkgInfo,
+    subscription_info: Option<SubscriptionInfo>,
     sidebar_status: SidebarStatus,
     proxies_status: ProxiesStatus,
 
@@ -103,6 +105,7 @@ impl App {
             tick: 0f64,
             akasha_config,
             pkginfo,
+            subscription_info: None,
             debug: String::new(),
         }
     }
@@ -180,6 +183,18 @@ impl App {
         // Renderint interval
         let mut ticker = interval(Duration::from_millis(1000 / 24));
 
+        // ANCHOR: Initialize the subscription information.
+        let (tx_subscription, mut rx_subscription) = mpsc::channel::<Option<SubscriptionInfo>>(64);
+        if self.subscription_info.is_none() {
+            let url = self.akasha_config.subscription_link.clone();
+            tokio::spawn(async move {
+                let sub_info = SubscriptionInfo::new(url).await;
+                let bundle = sub_info.ok();
+                let _ = tx_subscription.send(bundle).await;
+            });
+        }
+        // ANCHOR_END: Initialize the subscription information.
+
         // ANCHOR: start the thread of traffic monitor
         let (tx_traffic, mut rx_traffic) = mpsc::channel::<Value>(64);
         let (tx_memory, mut rx_memory) = mpsc::channel::<Value>(64);
@@ -224,6 +239,11 @@ impl App {
         while self.running {
             tokio::select! {
                 _ = ticker.tick() => {
+                    // Initialize subscription
+                    if let Ok(bundle) = rx_subscription.try_recv() {
+                        self.subscription_info = bundle;
+                    }
+
                     // traffic monitor thread recv
                     if let Ok(value) = rx_traffic.try_recv() {
                         log::trace!("Traffic try_recv(): {:?}", value);
