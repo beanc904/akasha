@@ -8,9 +8,7 @@ use unicode_width::UnicodeWidthStr;
 use crate::app::App;
 
 pub(super) fn render_proxies(app: &mut App, frame: &mut Frame, layout_root: &Rc<[Rect]>) {
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .title(" Proxies(Enter/Esc) ");
+    let block = Block::default().borders(Borders::ALL).title(" Proxies(Enter/Esc) ");
     let block_inner = block.inner(layout_root[1]);
     let mainwindow = Layout::default()
         .direction(Direction::Horizontal)
@@ -22,10 +20,8 @@ pub(super) fn render_proxies(app: &mut App, frame: &mut Frame, layout_root: &Rc<
         .bg(Color::White)
         .fg(Color::DarkGray)
         .add_modifier(Modifier::BOLD);
-    let selected_proxy_style = Style::default()
-        .bg(Color::Yellow)
-        .fg(Color::Blue)
-        .add_modifier(Modifier::BOLD);
+    let selected_proxy_style =
+        Style::default().bg(Color::Yellow).fg(Color::Blue).add_modifier(Modifier::BOLD);
     let tab_items: Vec<ListItem> = app
         .proxies_status
         .group_items
@@ -103,7 +99,7 @@ fn make_item<'a>(name: &'a String, value: Option<i32>, width: u16) -> ListItem<'
                 timeout = true;
             }
             format!("{}ms", value)
-        }
+        },
         None => format!(""),
     };
 
@@ -126,7 +122,7 @@ fn make_item<'a>(name: &'a String, value: Option<i32>, width: u16) -> ListItem<'
                     } else {
                         Color::LightRed
                     }
-                }
+                },
                 None => Color::Red,
             }
         } else {

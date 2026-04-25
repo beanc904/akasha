@@ -41,12 +41,12 @@ pub(super) fn render_dashboard(app: &App, frame: &mut Frame, layout_root: &Rc<[R
                 None => format!("usage err"),
             };
             (time_txt, usage_txt)
-        }
+        },
         None => {
             let time_txt = format!("time err");
             let usage_txt = format!("usage err");
             (time_txt, usage_txt)
-        }
+        },
     };
 
     let underline_style = Style::new().underlined();
@@ -56,25 +56,13 @@ pub(super) fn render_dashboard(app: &App, frame: &mut Frame, layout_root: &Rc<[R
             Span::styled("From: ", underline_style),
             Span::raw(&app.akasha_config.subscription_link),
         ]),
-        Line::from(vec![
-            Span::styled("Update Time: ", underline_style),
-            Span::raw(time_txt),
-        ]),
-        Line::from(vec![
-            Span::styled("Used / Total: ", underline_style),
-            Span::raw(usage_txt),
-        ]),
+        Line::from(vec![Span::styled("Update Time: ", underline_style), Span::raw(time_txt)]),
+        Line::from(vec![Span::styled("Used / Total: ", underline_style), Span::raw(usage_txt)]),
     ];
     let currentnode_txt = vec![
         title_lines[1].clone(),
-        Line::from(vec![
-            Span::styled("Selected: ", underline_style),
-            Span::raw("test text"),
-        ]),
-        Line::from(vec![
-            Span::styled("Delay: ", underline_style),
-            Span::raw("test text"),
-        ]),
+        Line::from(vec![Span::styled("Selected: ", underline_style), Span::raw("test text")]),
+        Line::from(vec![Span::styled("Delay: ", underline_style), Span::raw("test text")]),
     ];
 
     let mut txt = Vec::new();

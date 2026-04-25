@@ -41,7 +41,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     } else {
                         println!("Now the chosen proxy is: {}", now);
                     }
-                }
+                },
                 None => eprintln!("Something wrong with the proxy."),
             }
         }

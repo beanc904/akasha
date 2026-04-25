@@ -78,7 +78,7 @@ impl Mihomo {
                         "missing external host".to_string(),
                     )))
                 }
-            }
+            },
             Protocol::LocalSocket => Ok(format!("http://localhost/{suffix_url}")),
         }
     }
@@ -110,7 +110,7 @@ impl Mihomo {
                 let method_str = method.as_str().to_string();
                 log::error!("method not supported: {method_str}");
                 Err(Error::MethodNotSupported(method_str))
-            }
+            },
         };
         // setup timeout here, to establish local socket connecttime, and gain timeout property
         Ok(req?.timeout(DEFAULT_TIMEOUT))
@@ -130,7 +130,7 @@ impl Mihomo {
                         "missing socket path".to_string(),
                     )))
                 }
-            }
+            },
         }
     }
 
@@ -149,7 +149,7 @@ impl Mihomo {
                         "missing external host".to_string(),
                     )))
                 }
-            }
+            },
             Protocol::LocalSocket => Ok(format!("ws://localhost/{suffix_url}")),
         }
     }
@@ -173,10 +173,10 @@ impl Mihomo {
             match message {
                 Ok(Message::Text(t)) => {
                     serialize_with_fallback(WebSocketMessage::Text(t.to_string()))
-                }
+                },
                 Ok(Message::Binary(t)) => {
                     serialize_with_fallback(WebSocketMessage::Binary(t.to_vec()))
-                }
+                },
                 Ok(Message::Ping(t)) => serialize_with_fallback(WebSocketMessage::Ping(t.to_vec())),
                 Ok(Message::Pong(t)) => serialize_with_fallback(WebSocketMessage::Pong(t.to_vec())),
                 Ok(Message::Close(t)) => {
@@ -184,12 +184,12 @@ impl Mihomo {
                         code: v.code.into(),
                         reason: v.reason.to_string(),
                     })))
-                }
+                },
                 Ok(Message::Frame(_)) => serde_json::Value::Null,
                 Err(e) => {
                     log::error!("websocket error: {e}");
                     serialize_with_fallback(WebSocketMessage::Text(Error::from(e).to_string()))
-                }
+                },
             }
         };
 
@@ -200,11 +200,7 @@ impl Mihomo {
                 let (ws_stream, _) = connect_async(request).await?;
                 let (writer, mut reader) = ws_stream.split();
 
-                manager
-                    .0
-                    .write()
-                    .await
-                    .insert(id, WebSocketWriter::TcpStreamWriter(writer));
+                manager.0.write().await.insert(id, WebSocketWriter::TcpStreamWriter(writer));
 
                 tokio::spawn(async move {
                     let manager_ = Arc::clone(&manager);
@@ -229,7 +225,7 @@ impl Mihomo {
                 });
 
                 Ok(id)
-            }
+            },
             Protocol::LocalSocket => {
                 if let Some(socket_path) = self.socket_path.as_ref() {
                     log::debug!(
@@ -248,11 +244,7 @@ impl Mihomo {
                     let (ws_stream, _) = client_async(request, stream).await?;
                     let (writer, mut reader) = ws_stream.split();
 
-                    manager
-                        .0
-                        .write()
-                        .await
-                        .insert(id, WebSocketWriter::SocketStreamWriter(writer));
+                    manager.0.write().await.insert(id, WebSocketWriter::SocketStreamWriter(writer));
 
                     tokio::spawn(async move {
                         let manager_ = Arc::clone(&manager);
@@ -283,7 +275,7 @@ impl Mihomo {
                         "missing socket path".to_string(),
                     )))
                 }
-            }
+            },
         }
     }
 
@@ -613,16 +605,12 @@ impl Mihomo {
             // maybe proxy delay is timeout response, try parse it.
             match response.json::<ErrorResponse>().await {
                 Ok(err_res) => {
-                    log::debug!(
-                        "healthcheck node[{}] error: {}",
-                        proxy_name,
-                        err_res.message
-                    );
+                    log::debug!("healthcheck node[{}] error: {}", proxy_name, err_res.message);
                     return Ok(ProxyDelay { delay: 0 });
-                }
+                },
                 Err(e) => {
                     ret_failed_resp!("healthcheck node[{}] failed, {}", proxy_name, e);
-                }
+                },
             }
         }
         Ok(response.json::<ProxyDelay>().await?)
@@ -663,9 +651,8 @@ impl Mihomo {
     pub async fn select_node_for_group(&self, group_name: &str, node: &str) -> Result<()> {
         let group_name = urlencoding::encode(group_name);
         let body = json!({ "name": node });
-        let client = self
-            .build_request(Method::PUT, &format!("/proxies/{group_name}"))?
-            .json(&body);
+        let client =
+            self.build_request(Method::PUT, &format!("/proxies/{group_name}"))?.json(&body);
         let response = self.send_by_protocol(client).await?;
         if !response.status().is_success() {
             let err_msg = response.json::<ErrorResponse>().await.map_or_else(
@@ -707,20 +694,19 @@ impl Mihomo {
     ) -> Result<ProxyDelay> {
         let proxy_name = urlencoding::encode(proxy_name);
         let suffix_url = format!("/proxies/{proxy_name}/delay");
-        let client = self.build_request(Method::GET, &suffix_url)?.query(&[
-            ("timeout", &timeout.to_string()),
-            ("url", &test_url.to_string()),
-        ]);
+        let client = self
+            .build_request(Method::GET, &suffix_url)?
+            .query(&[("timeout", &timeout.to_string()), ("url", &test_url.to_string())]);
         let response = self.send_by_protocol(client).await?;
         if !response.status().is_success() {
             match response.json::<ErrorResponse>().await {
                 Ok(err_res) => {
                     log::debug!("delay proxy[{}] failed: {}", proxy_name, err_res.message);
                     return Ok(ProxyDelay { delay: 0 });
-                }
+                },
                 Err(e) => {
                     ret_failed_resp!("delay proxy failed, {}", e);
-                }
+                },
             }
         }
         Ok(response.json::<ProxyDelay>().await?)
@@ -849,10 +835,9 @@ impl Mihomo {
 
     /// Update kernel
     pub async fn upgrade_core(&self, channel: CoreUpdaterChannel, force: bool) -> Result<()> {
-        let client = self.build_request(Method::POST, "/upgrade")?.query(&[
-            ("channel", &channel.to_string()),
-            ("force", &force.to_string()),
-        ]);
+        let client = self
+            .build_request(Method::POST, "/upgrade")?
+            .query(&[("channel", &channel.to_string()), ("force", &force.to_string())]);
         let response = self.send_by_protocol(client).await?;
         if !response.status().is_success() {
             let err_msg = response.json::<ErrorResponse>().await.map_or_else(

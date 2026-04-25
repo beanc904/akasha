@@ -1,0 +1,61 @@
+# https://github.com/rust-lang/rustfmt?tab=readme-ov-file#rusts-editions
+edition = "2024"
+style_edition = "2024"
+
+max_width = 100              # Balanced width for splits and readability
+hard_tabs = false
+tab_spaces = 4
+
+# Layout and line breaking
+use_small_heuristics = "Max" # Be less aggressive with line breaking
+fn_params_layout = "Tall"    # Multi-line function params when needed
+chain_width = 80             # Keep method chains readable
+single_line_if_else_max_width = 60
+
+# Structs and enums
+struct_lit_width = 40
+struct_variant_width = 40
+
+# Imports (important for consistency across editors)
+reorder_imports = true
+group_imports = "StdExternalCrate"  # std / external / crate grouped
+imports_granularity = "Crate"       # Merge imports at crate level
+
+# Comments and documentation
+wrap_comments = true
+comment_width = 100
+normalize_comments = true
+normalize_doc_attributes = true
+
+# Control flow formatting
+match_block_trailing_comma = true
+match_arm_blocks = true
+
+# Trailing syntax (helps clean diffs)
+trailing_comma = "Vertical"
+trailing_semicolon = true
+
+# Spacing rules
+space_before_colon = false
+space_after_colon = true
+spaces_around_ranges = false
+
+# Strings and macros
+format_strings = true
+format_macro_matchers = true
+format_macro_bodies = true
+
+# Impl / trait organization
+reorder_impl_items = true
+
+# Where clauses
+where_single_line = false
+
+# Blank lines control
+blank_lines_upper_bound = 1
+blank_lines_lower_bound = 0
+
+# # Optional (enable only if using nightly rustfmt)
+# unstable_features = true
+# imports_layout = "HorizontalVertical"
+# format_code_in_doc_comments = true

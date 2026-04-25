@@ -19,22 +19,22 @@ pub(super) async fn args_parse() -> color_eyre::Result<()> {
                 match shell {
                     Some(Shell::Zsh) => {
                         println!("echo zsh praxy function...");
-                    }
+                    },
                     Some(Shell::Fish) => {
                         println!("echo fish praxy function...");
-                    }
+                    },
                     None => {
                         println!("write the function to your shell...");
-                    }
+                    },
                 }
             } else {
                 println!("reverse the function in your shell...");
             }
-        }
+        },
         // Unreachable branch
         None => {
             println!("unreachable place?");
-        }
+        },
     }
 
     Ok(())

@@ -65,30 +65,17 @@ pub async fn delay_group(
     keep_fixed: bool,
 ) -> Result<HashMap<String, u32>> {
     let fixed = if keep_fixed {
-        mihomo
-            .read()
-            .await
-            .get_group_by_name(&group_name)
-            .await?
-            .fixed
+        mihomo.read().await.get_group_by_name(&group_name).await?.fixed
     } else {
         None
     };
     log::debug!("delay group, fixed: {fixed:?}");
-    let res = mihomo
-        .read()
-        .await
-        .delay_group(&group_name, &test_url, timeout)
-        .await?;
+    let res = mihomo.read().await.delay_group(&group_name, &test_url, timeout).await?;
     if keep_fixed
         && let Some(fixed) = fixed
         && !fixed.is_empty()
     {
-        mihomo
-            .read()
-            .await
-            .select_node_for_group(&group_name, &fixed)
-            .await?;
+        mihomo.read().await.select_node_for_group(&group_name, &fixed).await?;
     }
     Ok(res)
 }
@@ -103,33 +90,21 @@ pub async fn get_proxy_provider_by_name(
     mihomo: Arc<RwLock<Mihomo>>,
     provider_name: String,
 ) -> Result<ProxyProvider> {
-    mihomo
-        .read()
-        .await
-        .get_proxy_provider_by_name(&provider_name)
-        .await
+    mihomo.read().await.get_proxy_provider_by_name(&provider_name).await
 }
 
 pub async fn update_proxy_provider(
     mihomo: Arc<RwLock<Mihomo>>,
     provider_name: String,
 ) -> Result<()> {
-    mihomo
-        .read()
-        .await
-        .update_proxy_provider(&provider_name)
-        .await
+    mihomo.read().await.update_proxy_provider(&provider_name).await
 }
 
 pub async fn healthcheck_proxy_provider(
     mihomo: Arc<RwLock<Mihomo>>,
     provider_name: String,
 ) -> Result<()> {
-    mihomo
-        .read()
-        .await
-        .healthcheck_proxy_provider(&provider_name)
-        .await
+    mihomo.read().await.healthcheck_proxy_provider(&provider_name).await
 }
 
 pub async fn healthcheck_node_in_provider(
@@ -161,11 +136,7 @@ pub async fn select_node_for_group(
     group_name: String,
     node: String,
 ) -> Result<()> {
-    mihomo
-        .read()
-        .await
-        .select_node_for_group(&group_name, &node)
-        .await
+    mihomo.read().await.select_node_for_group(&group_name, &node).await
 }
 
 pub async fn unfixed_proxy(mihomo: Arc<RwLock<Mihomo>>, group_name: String) -> Result<()> {
@@ -178,11 +149,7 @@ pub async fn delay_proxy_by_name(
     test_url: String,
     timeout: u32,
 ) -> Result<ProxyDelay> {
-    mihomo
-        .read()
-        .await
-        .delay_proxy_by_name(&proxy_name, &test_url, timeout)
-        .await
+    mihomo.read().await.delay_proxy_by_name(&proxy_name, &test_url, timeout).await
 }
 // ANCHOR_END: proxies
 
@@ -199,11 +166,7 @@ pub async fn update_rule_provider(
     mihomo: Arc<RwLock<Mihomo>>,
     provider_name: String,
 ) -> Result<()> {
-    mihomo
-        .read()
-        .await
-        .update_rule_provider(&provider_name)
-        .await
+    mihomo.read().await.update_rule_provider(&provider_name).await
 }
 // ANCHOR_END: rules
 

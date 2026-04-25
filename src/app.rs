@@ -264,8 +264,8 @@ impl App {
                                 let index =
                                     proxy_items[i].iter().position(|name| name == &now).unwrap();
                                 selected_proxy.push(index);
-                            }
-                            None => {}
+                            },
+                            None => {},
                         }
                     }
                 }
@@ -350,9 +350,9 @@ impl App {
         // match event {
         match evt {
             Event::Key(key) if key.kind == KeyEventKind::Press => self.on_key_event(key).await,
-            Event::Mouse(_) => {}
-            Event::Resize(_, _) => {}
-            _ => {}
+            Event::Mouse(_) => {},
+            Event::Resize(_, _) => {},
+            _ => {},
         }
         Ok(())
     }
@@ -372,7 +372,7 @@ impl App {
             (_, KeyCode::Esc) => self.esc_handler(),
             (_, KeyCode::Char('d')) => self.d_hander().await,
             // Add other key handlers here.
-            _ => {}
+            _ => {},
         }
     }
 

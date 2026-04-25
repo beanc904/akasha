@@ -43,7 +43,7 @@ impl WrapStream {
                     Err(e) if e.kind() == ErrorKind::WouldBlock => Ok(true),
                     Err(_) => Err(Error::ConnectionLost),
                 }
-            }
+            },
         }
     }
 
@@ -171,19 +171,15 @@ fn generate_socket_response(header: String, body: String) -> Result<reqwest::Res
             // }
             let response = res_builder.body(body.to_string())?;
             Ok(reqwest::Response::from(response))
-        }
+        },
         Ok(httparse::Status::Partial) => {
             log::error!("Partial response, need more data");
-            Err(Error::HttpParseError(
-                "Partial response, need more data".to_string(),
-            ))
-        }
+            Err(Error::HttpParseError("Partial response, need more data".to_string()))
+        },
         Err(e) => {
             log::error!("Failed to parse response: {e}");
-            Err(Error::HttpParseError(format!(
-                "Failed to parse response: {e}"
-            )))
-        }
+            Err(Error::HttpParseError(format!("Failed to parse response: {e}")))
+        },
     }
 }
 
@@ -370,10 +366,7 @@ impl DerefMut for IpcConnection {
 
 impl IpcConnection {
     fn new(stream: WrapStream) -> Self {
-        Self {
-            stream,
-            last_used: Instant::now(),
-        }
+        Self { stream, last_used: Instant::now() }
     }
 
     fn is_valid(&mut self) -> bool {
@@ -411,9 +404,7 @@ impl IpcConnectionPool {
     }
 
     pub fn global() -> Result<&'static Self> {
-        CONNECTION_POOL
-            .get()
-            .ok_or(Error::ConnectionPoolNotInitialized)
+        CONNECTION_POOL.get().ok_or(Error::ConnectionPoolNotInitialized)
     }
 
     /// Start thread of clear idle connection task
@@ -456,11 +447,7 @@ impl IpcConnectionPool {
                 false
             }
         });
-        log::debug!(
-            "cleanup connections done, before: {}, after: {}",
-            before,
-            connections.len()
-        );
+        log::debug!("cleanup connections done, before: {}, after: {}", before, connections.len());
     }
 
     async fn get_connection<'a>(
@@ -489,9 +476,9 @@ impl IpcConnectionPool {
                             log::error!("failed to acquire permit, forget permit");
                             self.semaphore.forget_permits(1);
                             Err(Error::ConnectionFailed)
-                        }
+                        },
                     }
-                }
+                },
                 RejectPolicy::Reject => Err(Error::ConnectionPoolFull),
                 RejectPolicy::Timeout(timeout_duration) => {
                     let acquire_future = self.semaphore.acquire();
@@ -500,14 +487,14 @@ impl IpcConnectionPool {
                         Ok(Err(_)) => Err(Error::ConnectionPoolFull),
                         Err(e) => Err(Error::Timeout(e)),
                     }
-                }
+                },
                 RejectPolicy::Wait => {
                     let acquire_future = self.semaphore.acquire().await;
                     match acquire_future {
                         Ok(permit) => Ok(permit),
                         Err(_) => Err(Error::ConnectionPoolFull),
                     }
-                }
+                },
             },
         }
     }
@@ -673,11 +660,11 @@ impl LocalSocket for RequestBuilder {
             Some(duration) => {
                 log::debug!("Timeout duration: {:?}", duration);
                 tokio::time::timeout(duration, process).await?
-            }
+            },
             None => {
                 log::debug!("No timeout specified");
                 process.await
-            }
+            },
         }
     }
 }
