@@ -26,7 +26,7 @@ impl Display for Protocol {
                 } else {
                     write!(f, "unix socket")
                 }
-            },
+            }
         }
     }
 }
@@ -895,10 +895,10 @@ impl WebSocketWriter {
         match self {
             WebSocketWriter::TcpStreamWriter(write) => {
                 write.send(message).await?;
-            },
+            }
             WebSocketWriter::SocketStreamWriter(write) => {
                 write.send(message).await?;
-            },
+            }
         }
         Ok(())
     }

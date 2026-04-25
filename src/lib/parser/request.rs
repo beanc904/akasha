@@ -47,7 +47,11 @@ impl SubscriptionInfo {
 
     pub async fn update(&mut self) -> Result<(), Box<dyn Error>> {
         let client = Client::new();
-        let resp = client.get(&self.url).header(USER_AGENT, CLASH_UA).send().await?;
+        let resp = client
+            .get(&self.url)
+            .header(USER_AGENT, CLASH_UA)
+            .send()
+            .await?;
         self.headers = resp.headers().clone();
         self.config_text = resp.text().await?;
         self.update_time = Local::now();
@@ -95,12 +99,17 @@ impl SubscriptionInfo {
                         if !value.is_empty() {
                             expire = Some(value.to_string());
                         }
-                    },
-                    _ => {},
+                    }
+                    _ => {}
                 }
             }
 
-            Some(Usage { upload, download, total, expire })
+            Some(Usage {
+                upload,
+                download,
+                total,
+                expire,
+            })
         } else {
             None
         }

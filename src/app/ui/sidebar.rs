@@ -31,7 +31,11 @@ pub(super) fn render_sidebar(app: &mut App, frame: &mut Frame, layout_root: &Rc<
         .collect();
 
     let sidebar = List::new(sidebar_items)
-        .block(Block::default().title(" Menu(Tab/BackTab) ").borders(Borders::ALL))
+        .block(
+            Block::default()
+                .title(" Menu(Tab/BackTab) ")
+                .borders(Borders::ALL),
+        )
         .highlight_style(
             Style::default()
                 .bg(Color::White)
@@ -55,8 +59,16 @@ pub(super) fn render_sidebar(app: &mut App, frame: &mut Frame, layout_root: &Rc<
         .map(|&(tick, _, down, _, _)| (tick, down / 1024f64))
         .collect();
     // The origin unit: b
-    let up_speed = app.traffic_data.back().unwrap_or(&(0f64, 0f64, 0f64, 0f64, 0f64)).1;
-    let down_speed = app.traffic_data.back().unwrap_or(&(0f64, 0f64, 0f64, 0f64, 0f64)).2;
+    let up_speed = app
+        .traffic_data
+        .back()
+        .unwrap_or(&(0f64, 0f64, 0f64, 0f64, 0f64))
+        .1;
+    let down_speed = app
+        .traffic_data
+        .back()
+        .unwrap_or(&(0f64, 0f64, 0f64, 0f64, 0f64))
+        .2;
     // let up_total = app.traffic_data.back().unwrap().3;
     // let down_total = app.traffic_data.back().unwrap().4;
     let datasets = vec![
@@ -72,17 +84,27 @@ pub(super) fn render_sidebar(app: &mut App, frame: &mut Frame, layout_root: &Rc<
             .data(&down_set),
     ];
     let chart_traffic_monitor = Chart::new(datasets)
-        .block(Block::default().title(" Traffic Monitor ").borders(Borders::ALL))
-        .x_axis(Axis::default().title("T").bounds([app.tick - 60f64, app.tick]).labels([
-            format!("{:.0}", app.tick - 60.0).bold(),
-            format!("{:.0}", app.tick - 30.0).into(),
-            format!("{:.0}", app.tick).into(),
-        ]))
-        .y_axis(Axis::default().title("KB/s").bounds([0.0, 10000.0]).labels([
-            "0".bold(),
-            "5k".into(),
-            "10k".into(),
-        ]));
+        .block(
+            Block::default()
+                .title(" Traffic Monitor ")
+                .borders(Borders::ALL),
+        )
+        .x_axis(
+            Axis::default()
+                .title("T")
+                .bounds([app.tick - 60f64, app.tick])
+                .labels([
+                    format!("{:.0}", app.tick - 60.0).bold(),
+                    format!("{:.0}", app.tick - 30.0).into(),
+                    format!("{:.0}", app.tick).into(),
+                ]),
+        )
+        .y_axis(
+            Axis::default()
+                .title("KB/s")
+                .bounds([0.0, 10000.0])
+                .labels(["0".bold(), "5k".into(), "10k".into()]),
+        );
     let up_speed_text = if up_speed <= 1024f64 {
         format!("Up Speed: {:.0} B/s", up_speed)
     } else if up_speed <= 1024f64 * 1024f64 {
@@ -104,7 +126,10 @@ pub(super) fn render_sidebar(app: &mut App, frame: &mut Frame, layout_root: &Rc<
     let traffic_info = vec![
         Line::from(up_speed_text),
         Line::from(down_speed_text),
-        Line::from(format!("Memory Inuse: {:.1} MB", app.memory_inuse / 1024f64 / 1024f64)),
+        Line::from(format!(
+            "Memory Inuse: {:.1} MB",
+            app.memory_inuse / 1024f64 / 1024f64
+        )),
     ];
     // ANCHOR_END: setup traffic monitor chart and dataset
 
@@ -117,7 +142,11 @@ pub(super) fn render_sidebar(app: &mut App, frame: &mut Frame, layout_root: &Rc<
         .block(Block::new().borders(Borders::ALL)),
         layout_sidebar[0],
     );
-    frame.render_stateful_widget(sidebar, layout_sidebar[1], &mut app.sidebar_status.list_state);
+    frame.render_stateful_widget(
+        sidebar,
+        layout_sidebar[1],
+        &mut app.sidebar_status.list_state,
+    );
     frame.render_widget(chart_traffic_monitor, layout_monitor[0]);
     frame.render_widget(Paragraph::new(traffic_info), layout_monitor[1]);
 }

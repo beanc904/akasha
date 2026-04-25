@@ -31,7 +31,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     if let Ok(mi) = &mihomo {
         let m = mi.read().await;
-        let delay = m.delay_group("自动选择", "https://www.gstatic.com/generate_204", 5000).await;
+        let delay = m
+            .delay_group("自动选择", "https://www.gstatic.com/generate_204", 5000)
+            .await;
         for proxy in proxies.iter() {
             let selected_delay = if let Ok(delay) = &delay {
                 Some(delay[proxy])

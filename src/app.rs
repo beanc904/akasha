@@ -23,7 +23,6 @@ use crate::pkginfo::PkgInfo;
 
 include!("app/statetypes.rs");
 
-// #[derive(Debug, Default)]
 pub struct App {
     /// Is the application running?
     running: bool,
@@ -35,8 +34,8 @@ pub struct App {
     akasha_config: AkashaConfig,
     // Package informations.
     pkginfo: PkgInfo,
-    subscription_info: Option<SubscriptionInfo>,
     sidebar_status: SidebarStatus,
+    dashboard_status: DashboardStatus,
     proxies_status: ProxiesStatus,
     logs_status: LogsStatus,
 
@@ -90,6 +89,23 @@ impl App {
                 ],
                 current_page: CurrentPage::Dashboard,
             },
+            dashboard_status: DashboardStatus {
+                titles: vec![
+                    " Profiles ",
+                    " CurrentNode ",
+                    " NetworkSettings ",
+                    " ProxyMode ",
+                    " TrafficStats ",
+                    " WebsiteTests ",
+                    " IpInformation ",
+                    " ClashInfo ",
+                    " SystemInfo ",
+                ],
+                subscription_info: None,
+                subscription_link: akasha_config.subscription_link.clone(),
+                selected_node: "".to_string(),
+                selected_node_delay: "".to_string(),
+            },
             proxies_status: ProxiesStatus {
                 group_state: ListState::default().with_selected(Some(0)),
                 group_items: mihomo_config
@@ -118,7 +134,6 @@ impl App {
             tick: 0f64,
             akasha_config,
             pkginfo,
-            subscription_info: None,
         }
     }
 
@@ -204,7 +219,7 @@ impl App {
     async fn d_hander(&mut self) {
         match self.sidebar_status.current_page {
             CurrentPage::Dashboard => todo!(),
-            CurrentPage::Proxies => self.proxies_status.d_handler(&self.mihomo).await,
+            CurrentPage::Proxies => self.proxies_status.d_handler(self.mihomo.clone()).await,
             CurrentPage::Profiles => todo!(),
             CurrentPage::Connections => todo!(),
             CurrentPage::Rules => todo!(),
@@ -223,7 +238,7 @@ impl App {
 
         // ANCHOR: Initialize the subscription information.
         let (tx_subscription, mut rx_subscription) = mpsc::channel::<Option<SubscriptionInfo>>(64);
-        if self.subscription_info.is_none() {
+        if self.dashboard_status.subscription_info.is_none() {
             let url = self.akasha_config.subscription_link.clone();
             tokio::spawn(async move {
                 let sub_info = SubscriptionInfo::new(url).await;
@@ -264,8 +279,8 @@ impl App {
                                 let index =
                                     proxy_items[i].iter().position(|name| name == &now).unwrap();
                                 selected_proxy.push(index);
-                            },
-                            None => {},
+                            }
+                            None => {}
                         }
                     }
                 }
@@ -279,7 +294,7 @@ impl App {
                 _ = ticker.tick() => {
                     // Initialize subscription
                     if let Ok(bundle) = rx_subscription.try_recv() {
-                        self.subscription_info = bundle;
+                        self.dashboard_status.subscription_info = bundle;
                     }
 
                     // traffic monitor thread recv
@@ -350,9 +365,9 @@ impl App {
         // match event {
         match evt {
             Event::Key(key) if key.kind == KeyEventKind::Press => self.on_key_event(key).await,
-            Event::Mouse(_) => {},
-            Event::Resize(_, _) => {},
-            _ => {},
+            Event::Mouse(_) => {}
+            Event::Resize(_, _) => {}
+            _ => {}
         }
         Ok(())
     }
@@ -372,7 +387,7 @@ impl App {
             (_, KeyCode::Esc) => self.esc_handler(),
             (_, KeyCode::Char('d')) => self.d_hander().await,
             // Add other key handlers here.
-            _ => {},
+            _ => {}
         }
     }
 

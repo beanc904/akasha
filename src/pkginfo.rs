@@ -46,7 +46,9 @@ impl PkgInfo {
 
     pub fn get_app_configdir(&self) -> Box<Path> {
         if let Ok(manifest_dir) = env::var("CARGO_MANIFEST_DIR") {
-            PathBuf::from(manifest_dir).join(DEBUG_CONFIG_DIR).into_boxed_path()
+            PathBuf::from(manifest_dir)
+                .join(DEBUG_CONFIG_DIR)
+                .into_boxed_path()
         } else {
             self.config_path.join(self.name).into_boxed_path()
         }
@@ -57,14 +59,21 @@ impl PkgInfo {
     }
 
     pub fn get_mihomo_socket(&self) -> Box<Path> {
-        self.tmp_path.join(self.name).join(MIHOMO_SOCKET_NAME).into_boxed_path()
+        self.tmp_path
+            .join(self.name)
+            .join(MIHOMO_SOCKET_NAME)
+            .into_boxed_path()
     }
 
     pub fn get_mihomo_config(&self) -> Box<Path> {
-        self.get_app_configdir().join(MIHOMO_CONFIG_NAME).into_boxed_path()
+        self.get_app_configdir()
+            .join(MIHOMO_CONFIG_NAME)
+            .into_boxed_path()
     }
 
     pub fn get_akasha_config(&self) -> Box<Path> {
-        self.get_app_configdir().join(AKASHA_CONFIG_NAME).into_boxed_path()
+        self.get_app_configdir()
+            .join(AKASHA_CONFIG_NAME)
+            .into_boxed_path()
     }
 }

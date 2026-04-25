@@ -77,6 +77,48 @@ impl SidebarStatus {
     }
 }
 
+struct DashboardStatus {
+    titles: Vec<&'static str>,
+    subscription_info: Option<SubscriptionInfo>,
+    subscription_link: String,
+    selected_node: String,
+    selected_node_delay: String,
+}
+
+impl DashboardStatus {
+    fn get_updatetime(&self) -> String {
+        match &self.subscription_info {
+            Some(subscription) => {
+                let update_time = subscription.get_updatetime();
+                format!("{:?}", update_time)
+            }
+            None => {
+                format!("time err")
+            }
+        }
+    }
+
+    fn get_usage(&self) -> String {
+        match &self.subscription_info {
+            Some(subscription) => {
+                let usage = subscription.parse_usage();
+                if let Some(usage) = usage {
+                    format!(
+                        "{} MB / {} MB",
+                        (usage.download + usage.upload) / 1024 / 1024,
+                        usage.total / 1024 / 1024
+                    )
+                } else {
+                    format!("usage err")
+                }
+            }
+            None => {
+                format!("usage err")
+            }
+        }
+    }
+}
+
 struct ProxiesStatus {
     group_state: ListState,
     group_items: Vec<(String, usize)>,
@@ -142,8 +184,7 @@ impl ProxiesStatus {
         self.proxy_focus = false;
     }
 
-    async fn d_handler(&mut self, mihomo: &Arc<RwLock<Mihomo>>) {
-        let mihomo = mihomo.clone();
+    async fn d_handler(&mut self, mihomo: Arc<RwLock<Mihomo>>) {
         let tx_delay = self.delay_mpsc.0.clone();
         let group_index = self.group_state.selected().unwrap();
         let group_name = self.group_items[group_index].0.clone();
@@ -159,6 +200,19 @@ impl ProxiesStatus {
                 log::error!("Encountered some problems with {} delay test.", group_name);
             }
         });
+    }
+
+    async fn get_selected_node_delay(&self, mihomo: Arc<RwLock<Mihomo>>) -> String {
+        format!("delay err")
+    }
+
+    fn get_selected_node(&self) -> String {
+        if let Some(item) = self.group_items.get(0) {
+            let idx = item.1;
+            self.proxy_items[0][idx].clone()
+        } else {
+            format!("selected err")
+        }
     }
 }
 

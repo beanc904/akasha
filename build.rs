@@ -15,17 +15,30 @@ fn main() {
 }
 
 fn get_git_hash() -> Option<String> {
-    let branch = Command::new("git").arg("rev-parse").arg("--abbrev-ref").arg("HEAD").output();
+    let branch = Command::new("git")
+        .arg("rev-parse")
+        .arg("--abbrev-ref")
+        .arg("HEAD")
+        .output();
     if let Ok(branch_output) = branch {
         let branch_string = String::from_utf8_lossy(&branch_output.stdout);
-        let commit = Command::new("git").arg("rev-parse").arg("--verify").arg("HEAD").output();
+        let commit = Command::new("git")
+            .arg("rev-parse")
+            .arg("--verify")
+            .arg("HEAD")
+            .output();
         if let Ok(commit_output) = commit {
             let commit_string = String::from_utf8_lossy(&commit_output.stdout);
 
             Some(format!(
                 "{}, {}",
                 branch_string.lines().next().unwrap_or(""),
-                commit_string.lines().next().unwrap_or("").get(..7).unwrap_or("")
+                commit_string
+                    .lines()
+                    .next()
+                    .unwrap_or("")
+                    .get(..7)
+                    .unwrap_or("")
             ))
         } else {
             panic!("Cannot get git commit: {}", commit.unwrap_err());

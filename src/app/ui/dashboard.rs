@@ -11,43 +11,23 @@ pub(super) fn render_dashboard(app: &App, frame: &mut Frame, layout_root: &Rc<[R
     let root_inner = root_block.inner(layout_root[1]);
     frame.render_widget(root_block, layout_root[1]);
 
-    let titles = [
-        " Profiles ",
-        " CurrentNode ",
-        " NetworkSettings ",
-        " ProxyMode ",
-        " TrafficStats ",
-        " WebsiteTests ",
-        " IpInformation ",
-        " ClashInfo ",
-        " SystemInfo ",
-    ];
-    let title_lines: Vec<Line> = titles
+    let title_lines: Vec<Line> = app
+        .dashboard_status
+        .titles
         .iter()
         .map(|title| Line::from(format!(">>>{}<<<", title)).bg(Color::DarkGray))
         .collect();
 
-    let (time_txt, usage_txt) = match &app.subscription_info {
-        Some(subscription) => {
-            let time = subscription.get_updatetime();
-            let usage = subscription.parse_usage();
-            let time_txt = format!("{:?}", time);
-            let usage_txt = match usage {
-                Some(usage) => format!(
-                    "{} MB / {} MB",
-                    (usage.download + usage.upload) / 1024 / 1024,
-                    usage.total / 1024 / 1024
-                ),
-                None => format!("usage err"),
-            };
-            (time_txt, usage_txt)
-        },
-        None => {
-            let time_txt = format!("time err");
-            let usage_txt = format!("usage err");
-            (time_txt, usage_txt)
-        },
-    };
+    // ANCHOR: getting time and usage info
+    let time_txt = app.dashboard_status.get_updatetime();
+    let usage_txt = app.dashboard_status.get_usage();
+    // ANCHOR_END: getting time and usage info
+
+    // ANCHOR: getting selected node and delay info
+    let selected_txt = app.proxies_status.get_selected_node();
+    let mihomo = app.mihomo.clone();
+    let node_delay_txt = app.proxies_status.get_selected_node_delay(mihomo);
+    // ANCHOR_END: getting selected node and delay info
 
     let underline_style = Style::new().underlined();
     let profiles_txt = vec![
@@ -56,13 +36,25 @@ pub(super) fn render_dashboard(app: &App, frame: &mut Frame, layout_root: &Rc<[R
             Span::styled("From: ", underline_style),
             Span::raw(&app.akasha_config.subscription_link),
         ]),
-        Line::from(vec![Span::styled("Update Time: ", underline_style), Span::raw(time_txt)]),
-        Line::from(vec![Span::styled("Used / Total: ", underline_style), Span::raw(usage_txt)]),
+        Line::from(vec![
+            Span::styled("Update Time: ", underline_style),
+            Span::raw(time_txt),
+        ]),
+        Line::from(vec![
+            Span::styled("Used / Total: ", underline_style),
+            Span::raw(usage_txt),
+        ]),
     ];
     let currentnode_txt = vec![
         title_lines[1].clone(),
-        Line::from(vec![Span::styled("Selected: ", underline_style), Span::raw("test text")]),
-        Line::from(vec![Span::styled("Delay: ", underline_style), Span::raw("test text")]),
+        Line::from(vec![
+            Span::styled("Selected: ", underline_style),
+            Span::raw(selected_txt),
+        ]),
+        Line::from(vec![
+            Span::styled("Delay: ", underline_style),
+            Span::raw("delay err"),
+        ]),
     ];
 
     let mut txt = Vec::new();

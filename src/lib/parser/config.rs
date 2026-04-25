@@ -59,6 +59,8 @@ impl MihomoConfig {
 pub struct AkashaConfig {
     #[serde(rename = "subscription-link")]
     pub subscription_link: String,
+    #[serde(rename = "test-url")]
+    pub test_url: Option<String>,
 }
 
 impl AkashaConfig {
