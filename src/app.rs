@@ -1,4 +1,5 @@
 mod ui;
+mod utils;
 
 use std::collections::{HashMap, VecDeque};
 use std::path::PathBuf;
@@ -90,6 +91,7 @@ impl App {
                 current_page: CurrentPage::Dashboard,
             },
             dashboard_status: DashboardStatus {
+                scrollbar_pos: 0,
                 titles: vec![
                     " Profiles ",
                     " CurrentNode ",
@@ -102,9 +104,7 @@ impl App {
                     " SystemInfo ",
                 ],
                 subscription_info: None,
-                subscription_link: akasha_config.subscription_link.clone(),
-                selected_node: "".to_string(),
-                selected_node_delay: "".to_string(),
+                selected_node_delay: 0,
             },
             proxies_status: ProxiesStatus {
                 group_state: ListState::default().with_selected(Some(0)),
@@ -122,9 +122,9 @@ impl App {
             logs_status: LogsStatus {
                 log_state: AkaLogger::init(LoggerConfig {
                     buf_capacity: 10,
-                    level: LevelFilter::Debug,
+                    level: LevelFilter::Info,
                     with_stdout: true,
-                    log_path: PathBuf::from("debug/debug.log").into_boxed_path(),
+                    log_path: PathBuf::from("debug/info.log").into_boxed_path(),
                 }),
                 scrollbar_pos: (0, 0),
                 step_len: 3,
@@ -141,7 +141,7 @@ impl App {
     async fn enter_handler(&mut self) {
         match self.sidebar_status.current_page {
             CurrentPage::Dashboard => todo!(),
-            CurrentPage::Proxies => self.proxies_status.enter_handler(&self.mihomo).await,
+            CurrentPage::Proxies => self.proxies_status.enter_handler(self.mihomo.clone()).await,
             CurrentPage::Profiles => todo!(),
             CurrentPage::Connections => todo!(),
             CurrentPage::Rules => todo!(),
@@ -192,7 +192,7 @@ impl App {
 
     fn j_handler(&mut self) {
         match self.sidebar_status.current_page {
-            CurrentPage::Dashboard => todo!(),
+            CurrentPage::Dashboard => self.dashboard_status.j_handler(),
             CurrentPage::Proxies => self.proxies_status.tab_switch(true),
             CurrentPage::Profiles => todo!(),
             CurrentPage::Connections => todo!(),
@@ -205,7 +205,7 @@ impl App {
 
     fn k_handler(&mut self) {
         match self.sidebar_status.current_page {
-            CurrentPage::Dashboard => todo!(),
+            CurrentPage::Dashboard => self.dashboard_status.k_handler(),
             CurrentPage::Proxies => self.proxies_status.tab_switch(false),
             CurrentPage::Profiles => todo!(),
             CurrentPage::Connections => todo!(),
@@ -256,6 +256,25 @@ impl App {
         tokio::spawn(ac::ws_traffic(mihomo_traffic, tx_traffic));
         tokio::spawn(ac::ws_memory(mihomo_memory, tx_memory));
         // ANCHOR_END: start the thread of traffic monitor
+
+        // ANCHOR: setup the selected node delay info getter
+        let (tx_node_delay, mut rx_node_delay) = mpsc::channel::<u32>(64);
+        let mihomo_node_delay = self.mihomo.clone();
+        let proxy_name = self.proxies_status.get_selected_node().clone();
+        let test_url = self.akasha_config.test_url.clone().unwrap();
+        let timeout = 5000;
+        let mut ticker_node_delay_task = interval(Duration::from_secs(5));
+        tokio::spawn(async move {
+            loop {
+                ticker_node_delay_task.tick().await;
+                let mi = mihomo_node_delay.read().await;
+                let delay = mi
+                    .delay_proxy_by_name(&proxy_name, &test_url, timeout)
+                    .await;
+                let _ = tx_node_delay.send(delay.unwrap().delay).await;
+            }
+        });
+        // ANCHOR_END: setup the selected node delay info getter
 
         // ANCHOR: setup the group and proxy selected status in ui
         let (tx_proxies, mut rx_proxies) = mpsc::channel::<Vec<usize>>(64);
@@ -334,6 +353,11 @@ impl App {
                         } else {
                             panic!("There is something wrong with group size.");
                         }
+                    }
+
+                    if let Ok(value) = rx_node_delay.try_recv() {
+                        log::info!("Selected node delay: {}", value);
+                        self.dashboard_status.selected_node_delay = value;
                     }
 
                     // proxies delay info thread recv

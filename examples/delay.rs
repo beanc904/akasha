@@ -26,22 +26,35 @@ async fn main() -> Result<(), Box<dyn Error>> {
         )
         .build();
 
-    let mihomo_config = MihomoConfig::new("resources/config.yaml").unwrap();
+    let mihomo_config = MihomoConfig::new("config/config.yaml").unwrap();
     let proxies = mihomo_config.get_proxy_groups_proxies()[1].clone();
 
     if let Ok(mi) = &mihomo {
         let m = mi.read().await;
         let delay = m
-            .delay_group("自动选择", "https://www.gstatic.com/generate_204", 5000)
+            .delay_group("节点选择", "https://www.gstatic.com/generate_204", 5000)
             .await;
-        for proxy in proxies.iter() {
-            let selected_delay = if let Ok(delay) = &delay {
-                Some(delay[proxy])
-            } else {
-                None
-            };
-            println!("Proxy name: {} >> Delay is: {:?}", proxy, selected_delay);
-        }
+        // for proxy in proxies.iter() {
+        //     let selected_delay = if let Ok(delay) = &delay {
+        //         Some(delay[proxy])
+        //     } else {
+        //         None
+        //     };
+        //     println!("Proxy name: {} >> Delay is: {:?}", proxy, selected_delay);
+        // }
+        println!("Debug: {:?}", delay);
+    }
+
+    if let Ok(mi) = &mihomo {
+        let m = mi.read().await;
+        let proxy_name = "节点选择";
+        let delay = m
+            .delay_proxy_by_name(proxy_name, "https://www.gstatic.com/generate_204", 5000)
+            .await;
+        println!(
+            "Single Proxy node name: {} >> Delay is: {:?}",
+            proxy_name, delay
+        );
     }
 
     Ok(())
