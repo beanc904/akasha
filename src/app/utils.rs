@@ -81,7 +81,7 @@ impl DashboardStatus {
     }
 
     pub(super) fn k_handler(&mut self) {
-        let max = 43 - 1;
+        // let max = 43 - 1;
         let step = 1;
         let pos = &mut self.scrollbar_pos;
         if *pos == 0 || (*pos as i32 - step as i32) < 0 {

@@ -18,7 +18,7 @@ pub(super) fn render_dashboard(app: &App, frame: &mut Frame, layout_root: &Rc<[R
         .dashboard_status
         .titles
         .iter()
-        .map(|title| Line::from(format!(">>>{}<<<", title)).bg(Color::DarkGray))
+        .map(|title| Line::from(format!(">>> {} <<<", title)).bg(Color::DarkGray))
         .collect();
 
     // ANCHOR: getting time and usage info
@@ -45,67 +45,72 @@ pub(super) fn render_dashboard(app: &App, frame: &mut Frame, layout_root: &Rc<[R
     // ANCHOR_END: getting selected node and delay info
 
     let label_style = Style::new().underlined();
+    let labels = &app.dashboard_status.sublabels;
     let profiles_txt = vec![
         title_lines[0].clone(),
-        one_line("From: ", &app.akasha_config.subscription_link, label_style),
-        one_line("Update Time: ", time_txt, label_style),
-        one_line("Used / Total: ", usage_txt, label_style),
+        one_line(
+            labels[0][0],
+            &app.akasha_config.subscription_link,
+            label_style,
+        ),
+        one_line(labels[0][1], time_txt, label_style),
+        one_line(labels[0][2], usage_txt, label_style),
     ];
     let currentnode_txt = vec![
         title_lines[1].clone(),
-        one_line("Selected: ", selected_txt, label_style),
+        one_line(labels[1][0], selected_txt, label_style),
         // one_line("Delay: ", node_delay, underline_style),
-        Line::from(vec![Span::styled("Delay: ", label_style), node_delay]),
+        Line::from(vec![Span::styled(labels[1][1], label_style), node_delay]),
     ];
     let networksettings_txt = vec![
         title_lines[2].clone(),
-        one_line("System Proxy: ", "xxx", label_style),
-        one_line("Tun Mode: ", "xxx", label_style),
+        one_line(labels[2][0], "xxx", label_style),
+        one_line(labels[2][1], "xxx", label_style),
     ];
     let proxymode_txt = vec![
         title_lines[3].clone(),
-        one_line("Mode: ", "xxx", label_style),
+        one_line(labels[3][0], "xxx", label_style),
     ];
     let trafficstats_txt = vec![
         title_lines[4].clone(),
-        one_line("Upload Speed: ", "xxx", label_style),
-        one_line("Download Speed: ", "xxx", label_style),
-        one_line("Uploaded: ", "xxx", label_style),
-        one_line("Downloaded: ", "xxx", label_style),
-        one_line("Active Connections: ", "xxx", label_style),
-        one_line("Core Usage: ", "xxx", label_style),
+        one_line(labels[4][0], "xxx", label_style),
+        one_line(labels[4][1], "xxx", label_style),
+        one_line(labels[4][2], "xxx", label_style),
+        one_line(labels[4][3], "xxx", label_style),
+        one_line(labels[4][4], "xxx", label_style),
+        one_line(labels[4][5], "xxx", label_style),
     ];
     let websitetests_txt = vec![
         title_lines[5].clone(),
-        one_line("Apple: ", "xxx", label_style),
-        one_line("GitHub: ", "xxx", label_style),
-        one_line("Google: ", "xxx", label_style),
-        one_line("YouTube: ", "xxx", label_style),
+        one_line(labels[5][0], "xxx", label_style),
+        one_line(labels[5][1], "xxx", label_style),
+        one_line(labels[5][2], "xxx", label_style),
+        one_line(labels[5][3], "xxx", label_style),
     ];
     let ipinfo_txt = vec![
         title_lines[6].clone(),
-        one_line("IP: ", "xxx", label_style),
-        one_line("ASN: ", "xxx", label_style),
-        one_line("ISP: ", "xxx", label_style),
-        one_line("ORG: ", "xxx", label_style),
-        one_line("Location: ", "xxx", label_style),
-        one_line("Timezone: ", "xxx", label_style),
+        one_line(labels[6][0], "xxx", label_style),
+        one_line(labels[6][1], "xxx", label_style),
+        one_line(labels[6][2], "xxx", label_style),
+        one_line(labels[6][3], "xxx", label_style),
+        one_line(labels[6][4], "xxx", label_style),
+        one_line(labels[6][5], "xxx", label_style),
     ];
     let clashinfo_txt = vec![
         title_lines[7].clone(),
-        one_line("Core Version: ", "xxx", label_style),
-        one_line("System Proxy Address: ", "xxx", label_style),
-        one_line("Mixed Port: ", "xxx", label_style),
-        one_line("Uptime: ", "xxx", label_style),
-        one_line("Rules Count", "xxx", label_style),
+        one_line(labels[7][0], "xxx", label_style),
+        one_line(labels[7][1], "xxx", label_style),
+        one_line(labels[7][2], "xxx", label_style),
+        one_line(labels[7][3], "xxx", label_style),
+        one_line(labels[7][4], "xxx", label_style),
     ];
     let sysinfo_txt = vec![
         title_lines[8].clone(),
-        one_line("OS Info: ", "xxx", label_style),
-        one_line("Auto Launch: ", "xxx", label_style),
-        one_line("Running Mode: ", "xxx", label_style),
-        one_line("Last Check Update: ", "xxx", label_style),
-        one_line("Verge Version: ", "xxx", label_style),
+        one_line(labels[8][0], "xxx", label_style),
+        one_line(labels[8][1], "xxx", label_style),
+        one_line(labels[8][2], "xxx", label_style),
+        one_line(labels[8][3], "xxx", label_style),
+        one_line(labels[8][4], "xxx", label_style),
     ];
 
     let mut txts = Vec::new();

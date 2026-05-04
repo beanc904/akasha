@@ -18,6 +18,7 @@ struct SidebarStatus {
 struct DashboardStatus {
     scrollbar_pos: usize,
     titles: Vec<&'static str>,
+    sublabels: Vec<Vec<&'static str>>,
     subscription_info: Option<SubscriptionInfo>,
     selected_node_delay: u32,
 }
