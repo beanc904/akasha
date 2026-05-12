@@ -1,75 +1,84 @@
 # Akasha
 
-Akasha is a Rust project aimed at building a **terminal user interface (TUI)** for controlling **mihomo**.
+A **Rust TUI library and dashboard** for controlling [Mihomo](https://mihomo.me/).
 
-The project provides a lightweight Rust client for communicating with mihomo through **Unix socket IPC**.
-This client is primarily designed to support the TUI frontend, but it can also be used independently by other Rust applications.
+Akasha provides a terminal-native experience for managing Mihomo proxy with a focus on terminal usability, lightweight interaction, and scriptable Rust APIs.
 
-# Project Goals
+## Features
 
-The main goal of Akasha is to create a **terminal-native experience for managing mihomo**.
+- **Unix Socket IPC Communication** - Efficient bidirectional communication with Mihomo over Unix sockets
+- **Rust Client Library** - Fully async/await Rust client implementation with connection pooling
+- **Terminal UI** - Cross-platform TUI built with [Ratatui](https://ratatui.rs/) (in development)
+- **Scriptable APIs** - Usable as a standalone library in other Rust applications
+- **Connection Management** - Connection pool with configurable timeouts and health checks
+- **System Proxy Control** - System-wide proxy settings management (Windows, macOS, Linux)
 
-Most existing mihomo clients are GUI-based. Akasha explores a different direction by focusing on:
+## Project Status
 
-- terminal usability
-- lightweight interaction
-- scriptable Rust APIs
+### ✅ Implemented
 
-The project currently focuses on building the **communication layer between Rust and mihomo**.
+- Mihomo Unix socket IPC communication layer
+- Rust async client implementation (`akasha::client`)
+- Connection pooling with health checks
+- Version querying and system info
+- Usable as a standalone library
+- System proxy control utilities
 
-# Current Status
+### 🚧 In Progress
 
-Implemented:
+- TUI frontend and interactive dashboard
+- Proxy and connection visualization
+- Interactive Mihomo control interface
 
-- mihomo Unix socket IPC communication
-- Rust client implementation (`akasha::client`)
-- usable as a standalone Rust library
+## Architecture
 
-Work in progress:
-
-- TUI frontend
-- proxy and connection visualization
-- interactive mihomo control
-
-# Architecture
-
-```text
-mihomo core
-     │
-     │ IPC (Unix socket)
-     ▼
-akasha::client
-     │
-     ▼
+```
+Mihomo Core
+    │
+    ├─ Unix Socket IPC
+    │
+Akasha Client (async Rust)
+    │
+    ├─ Connection Pool
+    ├─ Command Handlers
+    └─ Error Handling
+    │
 Akasha TUI (in development)
+    │
+    └─ Dashboard & Controls
 ```
 
-- **mihomo** handles proxy logic and networking
-- **akasha::client** communicates with mihomo
-- **Akasha TUI** will provide the terminal interface
+## Installation
 
-# Installation
+### As a Library
 
-You can use Akasha directly from GitHub:
+Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
 akasha = { git = "https://github.com/beanc904/akasha.git" }
 ```
 
-# Usage Example
+### From Source
 
-Example of connecting to mihomo via Unix socket:
+```bash
+git clone https://github.com/beanc904/akasha.git
+cd akasha
+cargo build --release
+```
+
+## Quick Start
+
+### Basic Example
 
 ```rust
-use std::env;
-use std::error::Error;
-
 use akasha::client as ac;
+use std::env;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
-    let sock_path = env::var("AKASHA_SOCKET_PATH").unwrap_or("/tmp/akasha/mihomo.sock".to_string());
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let sock_path = env::var("AKASHA_SOCKET_PATH")
+        .unwrap_or_else(|_| "/tmp/akasha/mihomo.sock".to_string());
 
     let mihomo = ac::Builder::new()
         .protocol(ac::Protocol::LocalSocket)
@@ -82,43 +91,103 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 .health_check_interval(std::time::Duration::from_secs(10))
                 .build(),
         )
-        .build();
+        .build()?;
 
-    if let Ok(mi) = &mihomo {
-        let m = mi.read().await;
-        let version = m.get_version().await;
-        println!("Mihomo version: {:?}", version);
-    }
-    
+    let client = mihomo.read().await;
+    let version = client.get_version().await?;
+    println!("Mihomo version: {}", version);
+
     Ok(())
 }
 ```
 
-To learn more about the usage of client, visit [client.rs](examples/client.rs).
+For more examples, see [examples/client.rs](examples/client.rs).
 
-# Project Structure
+## Project Structure
 
-```text
-akasha
- ├─ tui           # terminal UI (work in progress)
- └─ lib
-     └─ client        # mihomo IPC client implementation
-         ├─ commands  # exposing the calling functions
-         └─ error     # error definitions
+```
+akasha/
+├── src/
+│   ├── lib/
+│   │   ├── client/          # Mihomo IPC client
+│   │   │   ├── commands.rs  # Command implementations
+│   │   │   ├── error.rs     # Error types
+│   │   │   └── mod.rs       # Client builder & pool
+│   │   └── mod.rs           # Library root
+│   ├── bin/                 # Binary targets (TUI)
+│   └── main.rs
+├── crates/
+│   ├── aka-logger/          # Logging utilities
+│   └── sysproxy-rs/         # System proxy management
+├── examples/                # Usage examples
+├── Cargo.toml
+└── README.md
 ```
 
-Currently, the `client` module contains the core functionality for communicating with mihomo.
+## Configuration
 
-# Background
+### Socket Path
 
-This project originated from extracting the mihomo control logic from a **Tauri plugin** and refactoring it into a standalone Rust library.
+Configure the Mihomo socket path via environment variable:
 
-The goal of this refactoring was to make the mihomo communication layer:
+```bash
+export AKASHA_SOCKET_PATH=/path/to/mihomo.sock
+```
 
-- reusable
-- independent from GUI frameworks
-- suitable for terminal applications
+Default: `/tmp/akasha/mihomo.sock`
 
-# License
+### Connection Pool
 
-[GPLv3](LICENSE)
+Customize connection pool behavior in your code:
+
+```rust
+ac::IpcPoolConfigBuilder::new()
+    .min_connections(5)              // Minimum pool size
+    .max_connections(50)             // Maximum pool size
+    .idle_timeout(Duration::from_secs(30))      // Connection idle timeout
+    .health_check_interval(Duration::from_secs(30)) // Health check frequency
+    .build()
+```
+
+## Platform Support
+
+- **Linux** - Full support
+- **macOS** - Full support
+- **Windows** - Full support (with WSL for Unix sockets)
+
+## Dependencies
+
+Key dependencies:
+- **tokio** - Async runtime
+- **ratatui** - TUI framework
+- **crossterm** - Terminal handling
+- **serde** - Serialization
+- **reqwest** - HTTP client
+- **tokio-tungstenite** - WebSocket support
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit issues and pull requests.
+
+## License
+
+This project is licensed under the [GNU General Public License v3.0](LICENSE).
+
+## Background
+
+Akasha originated from extracting the Mihomo control logic from a **Tauri plugin** and refactoring it into a standalone, framework-independent Rust library. This refactoring enables:
+
+- Reusable Mihomo communication layer
+- Independence from GUI frameworks
+- Suitability for terminal and server applications
+- Better testability and modularity
+
+## Resources
+
+- [Mihomo Documentation](https://mihomo.me/)
+- [Ratatui Documentation](https://docs.rs/ratatui/)
+- [Tokio Documentation](https://tokio.rs/)
+
+## Support
+
+For issues, questions, or suggestions, please [open an issue](https://github.com/beanc904/akasha/issues) on GitHub.
