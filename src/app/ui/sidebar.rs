@@ -3,6 +3,7 @@ use std::rc::Rc;
 use ratatui::prelude::*;
 use ratatui::widgets::{Axis, Chart, Dataset, List, ListItem, Paragraph};
 use ratatui::widgets::{Block, Borders};
+use sysproxy::Sysproxy;
 
 use crate::app::App;
 
@@ -139,7 +140,17 @@ pub(super) fn render_sidebar(app: &mut App, frame: &mut Frame, layout_root: &Rc<
             app.pkginfo.get_name().to_uppercase(),
             app.pkginfo.get_version()
         ))
-        .block(Block::new().borders(Borders::ALL)),
+        .block(Block::new().borders(Borders::ALL))
+        .fg(match &app.dashboard_status.sysproxy {
+            Some(Sysproxy { enable, .. }) => {
+                if *enable {
+                    Color::Green
+                } else {
+                    Color::default()
+                }
+            }
+            None => Color::default(),
+        }),
         layout_sidebar[0],
     );
     frame.render_stateful_widget(

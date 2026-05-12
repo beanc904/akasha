@@ -34,14 +34,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let delay = m
             .delay_group("节点选择", "https://www.gstatic.com/generate_204", 5000)
             .await;
-        // for proxy in proxies.iter() {
-        //     let selected_delay = if let Ok(delay) = &delay {
-        //         Some(delay[proxy])
-        //     } else {
-        //         None
-        //     };
-        //     println!("Proxy name: {} >> Delay is: {:?}", proxy, selected_delay);
-        // }
+        for proxy in proxies.iter() {
+            let selected_delay = if let Ok(delay) = &delay {
+                Some(delay[proxy])
+            } else {
+                None
+            };
+            println!("Proxy name: {} >> Delay is: {:?}", proxy, selected_delay);
+        }
         println!("Debug: {:?}", delay);
     }
 
