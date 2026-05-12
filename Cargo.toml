@@ -7,6 +7,7 @@ license = "GPL-3.0-or-later"
 
 [dependencies]
 aka-logger = { path = "crates/aka-logger", features = ["export"] }
+sysproxy = { path = "crates/sysproxy-rs" }
 chrono = "0.4.44"
 color-eyre = "0.6.3"
 crossterm = { version = "0.28.1", features = ["event-stream"] }

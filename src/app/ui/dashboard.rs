@@ -4,10 +4,11 @@ use std::rc::Rc;
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Paragraph};
 use ratatui::widgets::{Scrollbar, ScrollbarState, Wrap};
+use sysproxy::Sysproxy;
 
 use crate::app::App;
 
-pub(super) fn render_dashboard(app: &App, frame: &mut Frame, layout_root: &Rc<[Rect]>) {
+pub(super) fn render_dashboard(app: &mut App, frame: &mut Frame, layout_root: &Rc<[Rect]>) {
     let root_block = Block::default().borders(Borders::ALL).title(" Dashboard ");
     let root_inner = root_block.inner(layout_root[1]);
     let [para_area, scrollbar_area] =
@@ -44,6 +45,22 @@ pub(super) fn render_dashboard(app: &App, frame: &mut Frame, layout_root: &Rc<[R
     }));
     // ANCHOR_END: getting selected node and delay info
 
+    // ANCHOR: getting system proxy status
+    let sysproxy = &app.dashboard_status.sysproxy;
+    let (sysproxy_txt, sysproxy_style) = match sysproxy {
+        Some(Sysproxy { enable, .. }) => {
+            let style = Style::default();
+            if *enable {
+                ("ON".to_string(), style.fg(Color::Green))
+            } else {
+                ("OFF".to_string(), style.fg(Color::Red))
+            }
+        }
+        None => ("none".to_string(), Style::default()),
+    };
+    let system_proxy = Span::raw(sysproxy_txt).style(sysproxy_style);
+    // ANCHOR_END: getting system proxy status
+
     let label_style = Style::new().underlined();
     let labels = &app.dashboard_status.sublabels;
     let profiles_txt = vec![
@@ -64,7 +81,8 @@ pub(super) fn render_dashboard(app: &App, frame: &mut Frame, layout_root: &Rc<[R
     ];
     let networksettings_txt = vec![
         title_lines[2].clone(),
-        one_line(labels[2][0], "xxx", label_style),
+        // one_line(labels[2][0], sysproxy_txt, label_style),
+        Line::from(vec![Span::styled(labels[2][0], label_style), system_proxy]),
         one_line(labels[2][1], "xxx", label_style),
     ];
     let proxymode_txt = vec![
@@ -124,13 +142,10 @@ pub(super) fn render_dashboard(app: &App, frame: &mut Frame, layout_root: &Rc<[R
     txts.extend(clashinfo_txt);
     txts.extend(sysinfo_txt);
 
-    let mut txt_height = 0;
-    for txt in &txts {
-        txt_height += txt.iter().len();
-    }
+    app.dashboard_status.viewport_height = para_area.height;
     let pos = app.dashboard_status.scrollbar_pos;
     let scrollbar = Scrollbar::new(ratatui::widgets::ScrollbarOrientation::VerticalRight);
-    let mut scrollbar_state = ScrollbarState::new(txt_height).position(pos);
+    let mut scrollbar_state = ScrollbarState::new(app.dashboard_status.get_posmax()).position(pos);
     let paragraph = Paragraph::new(txts)
         .scroll((pos as u16, 0))
         .wrap(Wrap { trim: true });

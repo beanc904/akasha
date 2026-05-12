@@ -14,6 +14,7 @@ use log::LevelFilter;
 use ratatui::DefaultTerminal;
 use ratatui::widgets::ListState;
 use serde_json::Value;
+use sysproxy::Sysproxy;
 use tokio::sync::{RwLock, mpsc};
 use tokio::time::{Duration, interval};
 
@@ -92,6 +93,7 @@ impl App {
             },
             dashboard_status: DashboardStatus {
                 scrollbar_pos: 0,
+                viewport_height: 0,
                 titles: vec![
                     "Profiles",
                     "CurrentNode",
@@ -142,6 +144,7 @@ impl App {
                 ],
                 subscription_info: None,
                 selected_node_delay: 0,
+                sysproxy: None,
             },
             proxies_status: ProxiesStatus {
                 group_state: ListState::default().with_selected(Some(0)),
@@ -253,7 +256,7 @@ impl App {
         }
     }
 
-    async fn d_hander(&mut self) {
+    async fn d_handler(&mut self) {
         match self.sidebar_status.current_page {
             CurrentPage::Dashboard => todo!(),
             CurrentPage::Proxies => self.proxies_status.d_handler(self.mihomo.clone()).await,
@@ -265,6 +268,20 @@ impl App {
             CurrentPage::Settings => todo!(),
         }
     }
+
+    async fn p_handler(&mut self) {
+        match &mut self.dashboard_status.sysproxy {
+            Some(sysproxy) => {
+                sysproxy.enable = !sysproxy.enable;
+                sysproxy.host = "127.0.0.1".into();
+                sysproxy.port = 7890;
+
+                sysproxy.set_system_proxy().unwrap();
+                log::info!("Switched the system proxy status: {:?}", sysproxy);
+            }
+            None => log::error!("Something wrong with [`Sysproxy`] getting."),
+        }
+    }
     // ANCHOR_END: key handler events
 
     /// Run the application's main loop.
@@ -273,6 +290,18 @@ impl App {
         // Renderint interval
         let mut ticker = interval(Duration::from_millis(1000 / 24));
 
+        // ANCHOR: sidebar
+        // ANCHOR: start the thread of traffic monitor
+        let (tx_traffic, mut rx_traffic) = mpsc::channel::<Value>(64);
+        let (tx_memory, mut rx_memory) = mpsc::channel::<Value>(64);
+        let mihomo_traffic = self.mihomo.clone();
+        let mihomo_memory = self.mihomo.clone();
+        tokio::spawn(ac::ws_traffic(mihomo_traffic, tx_traffic));
+        tokio::spawn(ac::ws_memory(mihomo_memory, tx_memory));
+        // ANCHOR_END: start the thread of traffic monitor
+        // ANCHOR_END: sidebar
+
+        // ANCHOR: dashboard
         // ANCHOR: Initialize the subscription information.
         let (tx_subscription, mut rx_subscription) = mpsc::channel::<Option<SubscriptionInfo>>(64);
         if self.dashboard_status.subscription_info.is_none() {
@@ -284,15 +313,6 @@ impl App {
             });
         }
         // ANCHOR_END: Initialize the subscription information.
-
-        // ANCHOR: start the thread of traffic monitor
-        let (tx_traffic, mut rx_traffic) = mpsc::channel::<Value>(64);
-        let (tx_memory, mut rx_memory) = mpsc::channel::<Value>(64);
-        let mihomo_traffic = self.mihomo.clone();
-        let mihomo_memory = self.mihomo.clone();
-        tokio::spawn(ac::ws_traffic(mihomo_traffic, tx_traffic));
-        tokio::spawn(ac::ws_memory(mihomo_memory, tx_memory));
-        // ANCHOR_END: start the thread of traffic monitor
 
         // ANCHOR: setup the selected node delay info getter
         let (tx_node_delay, mut rx_node_delay) = mpsc::channel::<u32>(64);
@@ -313,6 +333,26 @@ impl App {
         });
         // ANCHOR_END: setup the selected node delay info getter
 
+        // ANCHOR: setup the system proxy status server
+        let (tx_sysproxy, mut rx_sysproxy) = mpsc::channel::<Sysproxy>(64);
+        let mut ticker_sysproxy_task = interval(Duration::from_secs(5));
+        tokio::spawn(async move {
+            loop {
+                ticker_sysproxy_task.tick().await;
+                match Sysproxy::get_system_proxy() {
+                    Ok(sysproxy) => {
+                        let _ = tx_sysproxy.send(sysproxy).await;
+                    }
+                    Err(_) => {
+                        log::info!("Something wrong with sysproxy getting.");
+                    }
+                }
+            }
+        });
+        // ANCHOR_END: setup the system proxy status server
+        // ANCHOR_END: dashboard
+
+        // ANCHOR: proxies
         // ANCHOR: setup the group and proxy selected status in ui
         let (tx_proxies, mut rx_proxies) = mpsc::channel::<Vec<usize>>(64);
         let mihomo_proxies = self.mihomo.clone();
@@ -344,6 +384,7 @@ impl App {
             }
         });
         // ANCHOR_END: setup the group and proxy selected status in ui
+        // ANCHOR_END: proxies
 
         while self.running {
             tokio::select! {
@@ -380,6 +421,16 @@ impl App {
                         self.memory_inuse = data["inuse"].as_f64().unwrap();
                     }
 
+                    if let Ok(value) = rx_node_delay.try_recv() {
+                        log::info!("Selected node delay: {}", value);
+                        self.dashboard_status.selected_node_delay = value;
+                    }
+
+                    if let Ok(value) = rx_sysproxy.try_recv() {
+                        log::trace!("Sysproxy try_recv(): {:?}", value);
+                        self.dashboard_status.sysproxy = Some(value);
+                    }
+
                     // proxies selected status thread recv
                     if let Ok(value) = rx_proxies.try_recv() {
                         log::trace!("Proxies Groups selected status: {:?}", value);
@@ -390,11 +441,6 @@ impl App {
                         } else {
                             panic!("There is something wrong with group size.");
                         }
-                    }
-
-                    if let Ok(value) = rx_node_delay.try_recv() {
-                        log::info!("Selected node delay: {}", value);
-                        self.dashboard_status.selected_node_delay = value;
                     }
 
                     // proxies delay info thread recv
@@ -446,7 +492,8 @@ impl App {
             (_, KeyCode::Char('l')) => self.l_handler(),
             (_, KeyCode::Enter) => self.enter_handler().await,
             (_, KeyCode::Esc) => self.esc_handler(),
-            (_, KeyCode::Char('d')) => self.d_hander().await,
+            (_, KeyCode::Char('d')) => self.d_handler().await,
+            (_, KeyCode::Char('p')) => self.p_handler().await,
             // Add other key handlers here.
             _ => {}
         }

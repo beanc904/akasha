@@ -17,10 +17,12 @@ struct SidebarStatus {
 
 struct DashboardStatus {
     scrollbar_pos: usize,
+    viewport_height: u16,
     titles: Vec<&'static str>,
     sublabels: Vec<Vec<&'static str>>,
     subscription_info: Option<SubscriptionInfo>,
     selected_node_delay: u32,
+    sysproxy: Option<Sysproxy>,
 }
 
 struct ProxiesStatus {

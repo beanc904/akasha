@@ -70,7 +70,7 @@ impl DashboardStatus {
     }
 
     pub(super) fn j_handler(&mut self) {
-        let max = 43 - 1;
+        let max = self.get_posmax();
         let step = 1;
         let pos = &mut self.scrollbar_pos;
         if *pos >= max {
@@ -89,6 +89,13 @@ impl DashboardStatus {
         } else {
             *pos -= step;
         }
+    }
+
+    pub(super) fn get_posmax(&self) -> usize {
+        let para_lines: usize = self.sublabels.iter().map(|row| row.len()).sum();
+        let title_lines = self.titles.len();
+        let total_lines = para_lines + title_lines;
+        total_lines - self.viewport_height as usize + 2
     }
 }
 
