@@ -30,7 +30,7 @@ release:
 # ANCHOR_END: Project debug commands
 
 test:
-	@echo "$(BLUE)[INFO]$(NC): Creating dir $@"
+	@echo "$(BLUE)[INFO]$(NC): Creating dir [\`$@\`]"
 
 # ANCHOR: [`prebuild`] target
 prebuild: \
@@ -38,10 +38,10 @@ prebuild: \
 		$(GEOSITE_DAT) \
 		$(GEOIP_DAT) \
 		$(MIHOMO_BIN)
-		@echo "$(GREEN)[INFO]:$(NC) Finishing prebuild process!"
+		@echo "$(GREEN)[SUCCESS]:$(NC) Finishing prebuild process!"
 
 $(ARTIFACTS):
-	@echo "$(BLUE)[INFO]:$(NC) Creating dir $@"
+	@echo "$(BLUE)[INFO]:$(NC) Creating dir [\`$@\`]"
 	@mkdir -p $(ARTIFACTS)
 
 $(COUNTRY_MMDB): | $(ARTIFACTS)
