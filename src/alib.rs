@@ -93,7 +93,8 @@ end
         Some(Command::MihomoStart) => {
             let pkginfo = PkgInfo::new();
             println!(
-                "mihomo -f {} -ext-ctl-unix {}",
+                "akasha-mihomo -d {} -f {} -ext-ctl-unix {}",
+                pkginfo.get_app_configdir().to_str().unwrap(),
                 pkginfo.get_mihomo_config().to_str().unwrap(),
                 pkginfo.get_mihomo_socket().to_str().unwrap()
             );
@@ -190,7 +191,7 @@ impl Shell {
 
     /// Init line
     fn init_line(self) -> String {
-        format!(r#"eval "$(akasha init {})""#, self.name())
+        format!(r#"eval "$(/usr/local/bin/akasha init {})""#, self.name())
     }
 }
 
