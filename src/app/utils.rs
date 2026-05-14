@@ -34,6 +34,11 @@ impl SidebarStatus {
         liststate_switch(false, &mut self.list_state, self.list_items.len());
         self.update_liststate_status();
     }
+
+    pub(super) fn switch_sidebar(&mut self, index: usize) {
+        self.list_state.select(Some(index));
+        self.update_liststate_status();
+    }
 }
 
 impl DashboardStatus {

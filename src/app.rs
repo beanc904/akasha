@@ -498,6 +498,10 @@ impl App {
             (_, KeyCode::Esc) => self.esc_handler(),
             (_, KeyCode::Char('d')) => self.d_handler().await,
             (_, KeyCode::Char('p')) => self.p_handler().await,
+            (_, KeyCode::Char(c @ '1'..='8')) => {
+                let idx = (c as u8 - b'1') as usize;
+                self.sidebar_status.switch_sidebar(idx);
+            }
             // Add other key handlers here.
             _ => {}
         }

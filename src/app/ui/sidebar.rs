@@ -28,7 +28,11 @@ pub(super) fn render_sidebar(app: &mut App, frame: &mut Frame, layout_root: &Rc<
         .sidebar_status
         .list_items
         .iter()
-        .map(|i| ListItem::new(*i).style(Style::default().fg(Color::White)))
+        .enumerate()
+        .map(|(idx, item)| {
+            ListItem::new(format!("({}) {}", idx + 1, item))
+                .style(Style::default().fg(Color::White))
+        })
         .collect();
 
     let sidebar = List::new(sidebar_items)
