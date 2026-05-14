@@ -150,11 +150,12 @@ impl ProxiesStatus {
         self.proxy_focus = false;
     }
 
-    pub(super) async fn d_handler(&mut self, mihomo: Arc<RwLock<Mihomo>>) {
+    pub(super) async fn d_handler(&mut self, mihomo: Arc<RwLock<Mihomo>>, test_url: String) {
         let tx_delay = self.delay_mpsc.0.clone();
         let group_index = self.group_state.selected().unwrap();
         let group_name = self.group_items[group_index].0.clone();
-        let test_url = "https://www.gstatic.com/generate_204".to_string();
+        // let test_url = "https://www.gstatic.com/generate_204".to_string();
+        // let test_url = "http://cp.cloudflare.com/generate_204".to_string();
         let timeout = 5000;
         let keep_fixed = true;
         tokio::spawn(async move {

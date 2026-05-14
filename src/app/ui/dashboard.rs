@@ -1,5 +1,4 @@
 use std::borrow::Cow;
-use std::rc::Rc;
 
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Paragraph};
@@ -8,7 +7,7 @@ use sysproxy::Sysproxy;
 
 use crate::app::App;
 
-pub(super) fn render_dashboard(app: &mut App, frame: &mut Frame, layout_root: &Rc<[Rect]>) {
+pub(super) fn render_dashboard(app: &mut App, frame: &mut Frame, layout_root: &[Rect]) {
     let root_block = Block::default().borders(Borders::ALL).title(" Dashboard ");
     let root_inner = root_block.inner(layout_root[1]);
     let [para_area, scrollbar_area] =
@@ -32,16 +31,11 @@ pub(super) fn render_dashboard(app: &mut App, frame: &mut Frame, layout_root: &R
     // let mihomo = app.mihomo.clone();
     // let node_delay_txt = app.proxies_status.get_selected_node_delay(mihomo);
     let delay = app.dashboard_status.selected_node_delay;
-    let node_delay = Span::raw(format!("{} ms", delay)).style(Style::default().fg(if delay == 0 {
-        Color::Red
-    } else {
-        if delay < 250 {
-            Color::Green
-        } else if delay < 500 {
-            Color::Blue
-        } else {
-            Color::LightRed
-        }
+    let node_delay = Span::raw(format!("{} ms", delay)).style(Style::default().fg(match delay {
+        0 => Color::Red,
+        1..250 => Color::Green,
+        250..500 => Color::Blue,
+        _ => Color::Yellow,
     }));
     // ANCHOR_END: getting selected node and delay info
 
@@ -51,45 +45,42 @@ pub(super) fn render_dashboard(app: &mut App, frame: &mut Frame, layout_root: &R
         Some(Sysproxy { enable, .. }) => {
             let style = Style::default();
             if *enable {
-                ("ON".to_string(), style.fg(Color::Green))
+                ("ON", style.fg(Color::Green))
             } else {
-                ("OFF".to_string(), style.fg(Color::Red))
+                ("OFF", style.fg(Color::Red))
             }
         }
-        None => ("none".to_string(), Style::default()),
+        None => ("none", Style::default()),
     };
     let system_proxy = Span::raw(sysproxy_txt).style(sysproxy_style);
     // ANCHOR_END: getting system proxy status
 
     let label_style = Style::new().underlined();
     let labels = &app.dashboard_status.sublabels;
-    let profiles_txt = vec![
+    let binding = app.akasha_config.subscription_link();
+    let profiles_section = vec![
         title_lines[0].clone(),
-        one_line(
-            labels[0][0],
-            &app.akasha_config.subscription_link,
-            label_style,
-        ),
+        one_line(labels[0][0], &binding, label_style),
         one_line(labels[0][1], time_txt, label_style),
         one_line(labels[0][2], usage_txt, label_style),
     ];
-    let currentnode_txt = vec![
+    let currentnode_section = vec![
         title_lines[1].clone(),
         one_line(labels[1][0], selected_txt, label_style),
         // one_line("Delay: ", node_delay, underline_style),
         Line::from(vec![Span::styled(labels[1][1], label_style), node_delay]),
     ];
-    let networksettings_txt = vec![
+    let networksettings_section = vec![
         title_lines[2].clone(),
         // one_line(labels[2][0], sysproxy_txt, label_style),
         Line::from(vec![Span::styled(labels[2][0], label_style), system_proxy]),
         one_line(labels[2][1], "xxx", label_style),
     ];
-    let proxymode_txt = vec![
+    let proxymode_section = vec![
         title_lines[3].clone(),
         one_line(labels[3][0], "xxx", label_style),
     ];
-    let trafficstats_txt = vec![
+    let trafficstats_section = vec![
         title_lines[4].clone(),
         one_line(labels[4][0], "xxx", label_style),
         one_line(labels[4][1], "xxx", label_style),
@@ -98,14 +89,14 @@ pub(super) fn render_dashboard(app: &mut App, frame: &mut Frame, layout_root: &R
         one_line(labels[4][4], "xxx", label_style),
         one_line(labels[4][5], "xxx", label_style),
     ];
-    let websitetests_txt = vec![
+    let websitetests_section = vec![
         title_lines[5].clone(),
         one_line(labels[5][0], "xxx", label_style),
         one_line(labels[5][1], "xxx", label_style),
         one_line(labels[5][2], "xxx", label_style),
         one_line(labels[5][3], "xxx", label_style),
     ];
-    let ipinfo_txt = vec![
+    let ipinfo_section = vec![
         title_lines[6].clone(),
         one_line(labels[6][0], "xxx", label_style),
         one_line(labels[6][1], "xxx", label_style),
@@ -114,7 +105,7 @@ pub(super) fn render_dashboard(app: &mut App, frame: &mut Frame, layout_root: &R
         one_line(labels[6][4], "xxx", label_style),
         one_line(labels[6][5], "xxx", label_style),
     ];
-    let clashinfo_txt = vec![
+    let clashinfo_section = vec![
         title_lines[7].clone(),
         one_line(labels[7][0], "xxx", label_style),
         one_line(labels[7][1], "xxx", label_style),
@@ -122,7 +113,7 @@ pub(super) fn render_dashboard(app: &mut App, frame: &mut Frame, layout_root: &R
         one_line(labels[7][3], "xxx", label_style),
         one_line(labels[7][4], "xxx", label_style),
     ];
-    let sysinfo_txt = vec![
+    let sysinfo_section = vec![
         title_lines[8].clone(),
         one_line(labels[8][0], "xxx", label_style),
         one_line(labels[8][1], "xxx", label_style),
@@ -131,22 +122,26 @@ pub(super) fn render_dashboard(app: &mut App, frame: &mut Frame, layout_root: &R
         one_line(labels[8][4], "xxx", label_style),
     ];
 
-    let mut txts = Vec::new();
-    txts.extend(profiles_txt);
-    txts.extend(currentnode_txt);
-    txts.extend(networksettings_txt);
-    txts.extend(proxymode_txt);
-    txts.extend(trafficstats_txt);
-    txts.extend(websitetests_txt);
-    txts.extend(ipinfo_txt);
-    txts.extend(clashinfo_txt);
-    txts.extend(sysinfo_txt);
+    let lines = [
+        profiles_section,
+        currentnode_section,
+        networksettings_section,
+        proxymode_section,
+        trafficstats_section,
+        websitetests_section,
+        ipinfo_section,
+        clashinfo_section,
+        sysinfo_section,
+    ]
+    .into_iter()
+    .flatten()
+    .collect::<Vec<_>>();
 
     app.dashboard_status.viewport_height = para_area.height;
     let pos = app.dashboard_status.scrollbar_pos;
     let scrollbar = Scrollbar::new(ratatui::widgets::ScrollbarOrientation::VerticalRight);
     let mut scrollbar_state = ScrollbarState::new(app.dashboard_status.get_posmax()).position(pos);
-    let paragraph = Paragraph::new(txts)
+    let paragraph = Paragraph::new(lines)
         .scroll((pos as u16, 0))
         .wrap(Wrap { trim: true });
 

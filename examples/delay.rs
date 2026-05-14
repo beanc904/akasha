@@ -26,8 +26,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         )
         .build();
 
-    let mihomo_config = MihomoConfig::new("config/config.yaml").unwrap();
-    let proxies = mihomo_config.get_proxy_groups_proxies()[1].clone();
+    let mihomo_config = MihomoConfig::from_file("config/config.yaml").unwrap();
+    let proxies = mihomo_config.groups_proxies()[1].clone();
 
     if let Ok(mi) = &mihomo {
         let m = mi.read().await;

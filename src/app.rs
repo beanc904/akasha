@@ -59,8 +59,8 @@ impl App {
     /// Construct a new instance of [`App`].
     pub fn new() -> Self {
         let pkginfo = PkgInfo::new();
-        let mihomo_config = MihomoConfig::new(pkginfo.get_mihomo_config()).unwrap();
-        let akasha_config = AkashaConfig::new(pkginfo.get_akasha_config()).unwrap();
+        let mihomo_config = MihomoConfig::from_file(pkginfo.get_mihomo_config()).unwrap();
+        let akasha_config = AkashaConfig::from_file(pkginfo.get_akasha_config()).unwrap();
         App {
             running: true,
             event_stream: EventStream::default(),
@@ -149,14 +149,14 @@ impl App {
             proxies_status: ProxiesStatus {
                 group_state: ListState::default().with_selected(Some(0)),
                 group_items: mihomo_config
-                    .get_proxy_groups_namevec()
+                    .groups_name()
                     .into_iter()
                     .map(|name| (name, 0))
                     .collect(),
                 proxy_state: ListState::default().with_selected(Some(0)),
-                proxy_items: mihomo_config.get_proxy_groups_proxies(),
+                proxy_items: mihomo_config.groups_proxies(),
                 proxy_focus: false,
-                delay: vec![None; mihomo_config.get_num_of_groups()],
+                delay: vec![None; mihomo_config.group_count()],
                 delay_mpsc: mpsc::channel::<(Option<HashMap<String, u32>>, usize)>(64),
             },
             logs_status: LogsStatus {
@@ -259,7 +259,11 @@ impl App {
     async fn d_handler(&mut self) {
         match self.sidebar_status.current_page {
             CurrentPage::Dashboard => todo!(),
-            CurrentPage::Proxies => self.proxies_status.d_handler(self.mihomo.clone()).await,
+            CurrentPage::Proxies => {
+                self.proxies_status
+                    .d_handler(self.mihomo.clone(), self.akasha_config.test_url())
+                    .await
+            }
             CurrentPage::Profiles => todo!(),
             CurrentPage::Connections => todo!(),
             CurrentPage::Rules => todo!(),
@@ -305,7 +309,7 @@ impl App {
         // ANCHOR: Initialize the subscription information.
         let (tx_subscription, mut rx_subscription) = mpsc::channel::<Option<SubscriptionInfo>>(64);
         if self.dashboard_status.subscription_info.is_none() {
-            let url = self.akasha_config.subscription_link.clone();
+            let url = self.akasha_config.subscription_link();
             tokio::spawn(async move {
                 let sub_info = SubscriptionInfo::new(url).await;
                 let bundle = sub_info.ok();
@@ -318,7 +322,7 @@ impl App {
         let (tx_node_delay, mut rx_node_delay) = mpsc::channel::<u32>(64);
         let mihomo_node_delay = self.mihomo.clone();
         let proxy_name = self.proxies_status.get_selected_node().clone();
-        let test_url = self.akasha_config.test_url.clone().unwrap();
+        let test_url = self.akasha_config.test_url();
         let timeout = 5000;
         let mut ticker_node_delay_task = interval(Duration::from_secs(5));
         tokio::spawn(async move {

@@ -1,56 +1,59 @@
 /// Just using std file read is ok.
 /// If there is something wrong with config read,
 /// the whole process can not be initialized currectly.
-use std::{error::Error, fs::File, io::Read, path::Path};
+use std::{
+    error::Error,
+    fs::{self},
+    path::Path,
+};
 
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct MihomoConfig {
     #[serde(rename = "proxy-groups")]
-    pub proxy_groups: Vec<ProxyGroup>,
+    proxy_groups: Vec<ProxyGroup>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct ProxyGroup {
-    pub name: String,
+    name: String,
 
+    #[allow(unused)]
     #[serde(rename = "type")]
-    pub group_type: String,
+    group_type: String,
 
-    pub proxies: Vec<String>,
+    proxies: Vec<String>,
 }
 
 impl MihomoConfig {
-    pub fn new<P>(path: P) -> Result<Self, Box<dyn Error>>
+    /// Read config from [`path`]
+    pub fn from_file<P>(path: P) -> Result<Self, Box<dyn Error>>
     where
         P: AsRef<Path>,
     {
-        let path = path.as_ref();
-        let mut file = File::open(path)?;
-        let mut contents = String::new();
-        file.read_to_string(&mut contents)?;
-        let config = serde_yaml::from_str(&contents)?;
-        Ok(config)
+        let contents = fs::read_to_string(path)?;
+        Ok(serde_yaml::from_str(&contents)?)
     }
 
-    pub fn get_proxy_groups_namevec(&self) -> Vec<String> {
-        let mut vec = vec![];
-        for proxy_group in self.proxy_groups.iter() {
-            vec.push(proxy_group.name.clone());
-        }
-        vec
+    /// Get the [`ProxyGroup`]s' names
+    pub fn groups_name(&self) -> Vec<String> {
+        self.proxy_groups
+            .iter()
+            .map(|proxy_group| proxy_group.name.to_string())
+            .collect()
     }
 
-    pub fn get_proxy_groups_proxies(&self) -> Vec<Vec<String>> {
-        let mut groups = vec![];
-        for proxy_group in self.proxy_groups.iter() {
-            groups.push(proxy_group.proxies.clone());
-        }
-        groups
+    /// Get all the [`ProxyGroup::proxies`] details
+    pub fn groups_proxies(&self) -> Vec<Vec<String>> {
+        self.proxy_groups
+            .iter()
+            .map(|proxy_group| proxy_group.proxies.clone())
+            .collect()
     }
 
-    pub fn get_num_of_groups(&self) -> usize {
+    /// Get the count of [`ProxyGroup`]s
+    pub fn group_count(&self) -> usize {
         self.proxy_groups.len()
     }
 }
@@ -58,21 +61,27 @@ impl MihomoConfig {
 #[derive(Debug, Deserialize)]
 pub struct AkashaConfig {
     #[serde(rename = "subscription-link")]
-    pub subscription_link: String,
+    subscription_link: String,
     #[serde(rename = "test-url")]
-    pub test_url: Option<String>,
+    test_url: Option<String>,
 }
 
 impl AkashaConfig {
-    pub fn new<P>(path: P) -> Result<Self, Box<dyn Error>>
+    pub fn from_file<P>(path: P) -> Result<Self, Box<dyn Error>>
     where
         P: AsRef<Path>,
     {
-        let path = path.as_ref();
-        let mut file = File::open(path)?;
-        let mut contents = String::new();
-        file.read_to_string(&mut contents)?;
-        let config = toml::from_str(&contents)?;
-        Ok(config)
+        let contents = fs::read_to_string(path)?;
+        Ok(toml::from_str(&contents)?)
+    }
+
+    pub fn subscription_link(&self) -> String {
+        self.subscription_link.clone()
+    }
+
+    pub fn test_url(&self) -> String {
+        self.test_url
+            .clone()
+            .unwrap_or("http://cp.cloudflare.com/generate_204".to_string())
     }
 }
