@@ -14,6 +14,6 @@ async fn main() -> color_eyre::Result<()> {
         tui_main().await
     } else {
         // Running with one arg at least.
-        args_parse().await
+        cli_main().await
     }
 }

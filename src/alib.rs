@@ -15,7 +15,7 @@ pub(super) async fn tui_main() -> color_eyre::Result<()> {
     result
 }
 
-pub(super) async fn args_parse() -> color_eyre::Result<()> {
+pub(super) async fn cli_main() -> color_eyre::Result<()> {
     let args = Args::parse();
     let port = "7890";
 

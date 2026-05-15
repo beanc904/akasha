@@ -1,11 +1,12 @@
 mod dashboard;
 mod logs;
 mod proxies;
-mod sidebar;
 use dashboard::*;
 use logs::*;
 use proxies::*;
-use sidebar::*;
+
+pub mod components;
+use components::Component;
 
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Paragraph};
@@ -25,8 +26,10 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
         .split(frame.area());
     // ANCHOR_END: setup layout
 
-    render_sidebar(app, frame, &layout_root);
-    match app.sidebar_status.current_page {
+    app.sidebar.update(&app.dashboard_status.sysproxy);
+    app.sidebar.draw(frame, layout_root[0]);
+
+    match app.sidebar.current_page() {
         CurrentPage::Dashboard => {
             render_dashboard(app, frame, &layout_root);
         }

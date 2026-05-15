@@ -9,12 +9,6 @@ enum CurrentPage {
     Settings,
 }
 
-struct SidebarStatus {
-    list_state: ListState,
-    list_items: Vec<&'static str>,
-    current_page: CurrentPage,
-}
-
 struct DashboardStatus {
     scrollbar_pos: usize,
     viewport_height: u16,

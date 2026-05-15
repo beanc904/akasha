@@ -1,7 +1,7 @@
 mod ui;
 mod utils;
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -13,7 +13,6 @@ use futures::StreamExt;
 use log::LevelFilter;
 use ratatui::DefaultTerminal;
 use ratatui::widgets::ListState;
-use serde_json::Value;
 use sysproxy::Sysproxy;
 use tokio::sync::{RwLock, mpsc};
 use tokio::time::{Duration, interval};
@@ -21,6 +20,7 @@ use tokio::time::{Duration, interval};
 use akasha::client as ac;
 use akasha::parser::config::{AkashaConfig, MihomoConfig};
 
+use crate::app::ui::components::sidebar::Sidebar;
 use crate::pkginfo::PkgInfo;
 
 include!("app/statetypes.rs");
@@ -36,23 +36,11 @@ pub struct App {
     akasha_config: AkashaConfig,
     // Package informations.
     pkginfo: PkgInfo,
-    sidebar_status: SidebarStatus,
+    sidebar: Sidebar,
+    // sidebar_status: SidebarStatus,
     dashboard_status: DashboardStatus,
     proxies_status: ProxiesStatus,
     logs_status: LogsStatus,
-
-    // ANCHOR: traffic data
-    /// The touple signature is (tick, up, down, upTotal, downTotal). (unit: bps)
-    ///
-    /// The original ws_traffic data is:
-    /// Object {"data": String("{\"up\":0,\"down\":0,\"upTotal\":0,\"downTotal\":0}\n"), "type": String("Text")}
-    traffic_data: VecDeque<(f64, f64, f64, f64, f64)>,
-    /// The original ws_memory data is:
-    /// {"data":"{\"inuse\":41844736,\"oslimit\":0}\n","type":"Text"} (unit: b)
-    memory_inuse: f64,
-    /// It is the unit frame of traffic monitor, and also the x_axis.
-    tick: f64,
-    // ANCHOR_END: traffic data
 }
 
 impl App {
@@ -77,20 +65,7 @@ impl App {
                 )
                 .build()
                 .unwrap(),
-            sidebar_status: SidebarStatus {
-                list_state: ListState::default().with_selected(Some(0)),
-                list_items: vec![
-                    "Dashboard",
-                    "Proxies",
-                    "Profiles",
-                    "Connections",
-                    "Rules",
-                    "Logs",
-                    "Test",
-                    "Settings",
-                ],
-                current_page: CurrentPage::Dashboard,
-            },
+            sidebar: Sidebar::new(pkginfo.get_name(), pkginfo.get_version()),
             dashboard_status: DashboardStatus {
                 scrollbar_pos: 0,
                 viewport_height: 0,
@@ -169,9 +144,6 @@ impl App {
                 scrollbar_pos: (0, 0),
                 step_len: 3,
             },
-            traffic_data: VecDeque::default(),
-            memory_inuse: 0f64,
-            tick: 0f64,
             akasha_config,
             pkginfo,
         }
@@ -179,7 +151,7 @@ impl App {
 
     // ANCHOR: key handler events
     async fn enter_handler(&mut self) {
-        match self.sidebar_status.current_page {
+        match self.sidebar.current_page() {
             CurrentPage::Dashboard => todo!(),
             CurrentPage::Proxies => self.proxies_status.enter_handler(self.mihomo.clone()).await,
             CurrentPage::Profiles => todo!(),
@@ -192,7 +164,7 @@ impl App {
     }
 
     fn esc_handler(&mut self) {
-        match self.sidebar_status.current_page {
+        match self.sidebar.current_page() {
             CurrentPage::Dashboard => todo!(),
             CurrentPage::Proxies => self.proxies_status.esc_handler(),
             CurrentPage::Profiles => todo!(),
@@ -205,7 +177,7 @@ impl App {
     }
 
     fn l_handler(&mut self) {
-        match self.sidebar_status.current_page {
+        match self.sidebar.current_page() {
             CurrentPage::Dashboard => todo!(),
             CurrentPage::Proxies => self.proxies_status.l_handler(),
             CurrentPage::Profiles => todo!(),
@@ -218,7 +190,7 @@ impl App {
     }
 
     fn h_handler(&mut self) {
-        match self.sidebar_status.current_page {
+        match self.sidebar.current_page() {
             CurrentPage::Dashboard => todo!(),
             CurrentPage::Proxies => self.proxies_status.h_handler(),
             CurrentPage::Profiles => todo!(),
@@ -231,7 +203,7 @@ impl App {
     }
 
     fn j_handler(&mut self) {
-        match self.sidebar_status.current_page {
+        match self.sidebar.current_page() {
             CurrentPage::Dashboard => self.dashboard_status.j_handler(),
             CurrentPage::Proxies => self.proxies_status.tab_switch(true),
             CurrentPage::Profiles => todo!(),
@@ -244,7 +216,7 @@ impl App {
     }
 
     fn k_handler(&mut self) {
-        match self.sidebar_status.current_page {
+        match self.sidebar.current_page() {
             CurrentPage::Dashboard => self.dashboard_status.k_handler(),
             CurrentPage::Proxies => self.proxies_status.tab_switch(false),
             CurrentPage::Profiles => todo!(),
@@ -257,7 +229,7 @@ impl App {
     }
 
     async fn d_handler(&mut self) {
-        match self.sidebar_status.current_page {
+        match self.sidebar.current_page() {
             CurrentPage::Dashboard => todo!(),
             CurrentPage::Proxies => {
                 self.proxies_status
@@ -294,16 +266,7 @@ impl App {
         // Renderint interval
         let mut ticker = interval(Duration::from_millis(1000 / 24));
 
-        // ANCHOR: sidebar
-        // ANCHOR: start the thread of traffic monitor
-        let (tx_traffic, mut rx_traffic) = mpsc::channel::<Value>(64);
-        let (tx_memory, mut rx_memory) = mpsc::channel::<Value>(64);
-        let mihomo_traffic = self.mihomo.clone();
-        let mihomo_memory = self.mihomo.clone();
-        tokio::spawn(ac::ws_traffic(mihomo_traffic, tx_traffic));
-        tokio::spawn(ac::ws_memory(mihomo_memory, tx_memory));
-        // ANCHOR_END: start the thread of traffic monitor
-        // ANCHOR_END: sidebar
+        let (mut rx_traffic, mut rx_memory) = Sidebar::launch_server(self.mihomo.clone());
 
         // ANCHOR: dashboard
         // ANCHOR: Initialize the subscription information.
@@ -398,32 +361,7 @@ impl App {
                         self.dashboard_status.subscription_info = bundle;
                     }
 
-                    // traffic monitor thread recv
-                    if let Ok(value) = rx_traffic.try_recv() {
-                        log::trace!("Traffic try_recv(): {:?}", value);
-                        let inner_json_data = value["data"].as_str().unwrap().trim();
-                        let data: Value = serde_json::from_str(inner_json_data).unwrap();
-                        let up = data["up"].as_f64().unwrap();
-                        let down = data["down"].as_f64().unwrap();
-                        let up_total = data["upTotal"].as_f64().unwrap();
-                        let down_total = data["downTotal"].as_f64().unwrap();
-
-                        self.tick += 1.0;
-
-                        if self.traffic_data.len() >= 1024 {
-                            self.traffic_data.pop_front();
-                        }
-
-                        self.traffic_data.push_back((self.tick, up, down, up_total, down_total));
-                    }
-
-                    // memory inuse thread recv
-                    if let Ok(value) = rx_memory.try_recv() {
-                        log::trace!("Memory try_recv(): {:?}", value);
-                        let inner_json_data = value["data"].as_str().unwrap().trim();
-                        let data: Value = serde_json::from_str(inner_json_data).unwrap();
-                        self.memory_inuse = data["inuse"].as_f64().unwrap();
-                    }
+                    self.sidebar.sync_client(&mut rx_traffic, &mut rx_memory);
 
                     if let Ok(value) = rx_node_delay.try_recv() {
                         log::info!("Selected node delay: {}", value);
@@ -488,8 +426,8 @@ impl App {
         match (key.modifiers, key.code) {
             (_, KeyCode::Char('q'))
             | (KeyModifiers::CONTROL, KeyCode::Char('c') | KeyCode::Char('C')) => self.quit(),
-            (_, KeyCode::Tab) => self.sidebar_status.sidebar_next(),
-            (_, KeyCode::BackTab) => self.sidebar_status.sidebar_previous(),
+            (_, KeyCode::Tab) => self.sidebar.tab_next(),
+            (_, KeyCode::BackTab) => self.sidebar.tab_pre(),
             (_, KeyCode::Char('j')) => self.j_handler(),
             (_, KeyCode::Char('k')) => self.k_handler(),
             (_, KeyCode::Char('h')) => self.h_handler(),
@@ -500,7 +438,7 @@ impl App {
             (_, KeyCode::Char('p')) => self.p_handler().await,
             (_, KeyCode::Char(c @ '1'..='8')) => {
                 let idx = (c as u8 - b'1') as usize;
-                self.sidebar_status.switch_sidebar(idx);
+                self.sidebar.tab_switch(idx);
             }
             // Add other key handlers here.
             _ => {}

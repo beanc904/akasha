@@ -5,41 +5,7 @@ use akasha::client::mihomo::Mihomo;
 use ratatui::widgets::ListState;
 use tokio::sync::RwLock;
 
-use crate::app::{CurrentPage, DashboardStatus, LogsStatus, ProxiesStatus, SidebarStatus};
-
-impl SidebarStatus {
-    /// You must use it after finishing selecting the current page.
-    /// Sync the status of enumeration and liststate.
-    fn update_liststate_status(&mut self) {
-        match self.list_state.selected() {
-            Some(0) => self.current_page = CurrentPage::Dashboard,
-            Some(1) => self.current_page = CurrentPage::Proxies,
-            Some(2) => self.current_page = CurrentPage::Profiles,
-            Some(3) => self.current_page = CurrentPage::Connections,
-            Some(4) => self.current_page = CurrentPage::Rules,
-            Some(5) => self.current_page = CurrentPage::Logs,
-            Some(6) => self.current_page = CurrentPage::Test,
-            Some(7) => self.current_page = CurrentPage::Settings,
-            Some(_) => log::error!("Switching over array bound!"),
-            None => log::error!("There is something wrong with switching page."),
-        }
-    }
-
-    pub(super) fn sidebar_next(&mut self) {
-        liststate_switch(true, &mut self.list_state, self.list_items.len());
-        self.update_liststate_status();
-    }
-
-    pub(super) fn sidebar_previous(&mut self) {
-        liststate_switch(false, &mut self.list_state, self.list_items.len());
-        self.update_liststate_status();
-    }
-
-    pub(super) fn switch_sidebar(&mut self, index: usize) {
-        self.list_state.select(Some(index));
-        self.update_liststate_status();
-    }
-}
+use crate::app::{DashboardStatus, LogsStatus, ProxiesStatus};
 
 impl DashboardStatus {
     pub(super) fn get_updatetime(&self) -> String {
