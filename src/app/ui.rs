@@ -1,11 +1,10 @@
-mod dashboard;
 mod logs;
 mod proxies;
-use dashboard::*;
 use logs::*;
 use proxies::*;
 
 pub mod components;
+pub mod widgets;
 use components::Component;
 
 use ratatui::prelude::*;
@@ -26,12 +25,15 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
         .split(frame.area());
     // ANCHOR_END: setup layout
 
-    app.sidebar.update(&app.dashboard_status.sysproxy);
+    app.sidebar.update(&app.sysproxy);
     app.sidebar.draw(frame, layout_root[0]);
 
     match app.sidebar.current_page() {
         CurrentPage::Dashboard => {
-            render_dashboard(app, frame, &layout_root);
+            app.dashboard
+                .update(app.sysproxy.clone(), app.proxies_status.get_selected_node());
+            app.dashboard
+                .draw(frame, layout_root[1], app.akasha_config.subscription_link());
         }
         CurrentPage::Proxies => {
             render_proxies(app, frame, &layout_root);

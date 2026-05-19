@@ -1,8 +1,8 @@
 use ratatui::{Frame, layout::Rect};
 
+pub mod dashboard;
 pub mod sidebar;
 
 pub trait Component {
-    #[allow(unused)]
-    fn draw(&mut self, frame: &mut Frame, area: Rect) {}
+    fn draw(&mut self, frame: &mut Frame, area: Rect);
 }

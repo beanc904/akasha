@@ -7,19 +7,19 @@ use std::sync::Arc;
 
 use aka_logger::{AkaLogger, LogStore, LoggerConfig};
 use akasha::client::mihomo::Mihomo;
-use akasha::parser::request::SubscriptionInfo;
 use crossterm::event::{Event, EventStream, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use futures::StreamExt;
 use log::LevelFilter;
 use ratatui::DefaultTerminal;
 use ratatui::widgets::ListState;
 use sysproxy::Sysproxy;
-use tokio::sync::{RwLock, mpsc};
+use tokio::sync::{RwLock, broadcast, mpsc};
 use tokio::time::{Duration, interval};
 
 use akasha::client as ac;
 use akasha::parser::config::{AkashaConfig, MihomoConfig};
 
+use crate::app::ui::components::dashboard::Dashboard;
 use crate::app::ui::components::sidebar::Sidebar;
 use crate::pkginfo::PkgInfo;
 
@@ -36,9 +36,13 @@ pub struct App {
     akasha_config: AkashaConfig,
     // Package informations.
     pkginfo: PkgInfo,
+    sysproxy: Option<Sysproxy>,
+
+    // Components
     sidebar: Sidebar,
+    dashboard: Dashboard,
     // sidebar_status: SidebarStatus,
-    dashboard_status: DashboardStatus,
+    // dashboard_status: DashboardStatus,
     proxies_status: ProxiesStatus,
     logs_status: LogsStatus,
 }
@@ -66,61 +70,8 @@ impl App {
                 .build()
                 .unwrap(),
             sidebar: Sidebar::new(pkginfo.get_name(), pkginfo.get_version()),
-            dashboard_status: DashboardStatus {
-                scrollbar_pos: 0,
-                viewport_height: 0,
-                titles: vec![
-                    "Profiles",
-                    "CurrentNode",
-                    "NetworkSettings",
-                    "ProxyMode",
-                    "TrafficStats",
-                    "WebsiteTests",
-                    "IpInformation",
-                    "ClashInfo",
-                    "SystemInfo",
-                ],
-                sublabels: vec![
-                    vec!["From: ", "Update Time: ", "Used / Total: "],
-                    vec!["Selected: ", "Delay: "],
-                    vec!["System Proxy: ", "Tun Mode: "],
-                    vec!["Mode: "],
-                    vec![
-                        "Upload Speed: ",
-                        "Download Speed: ",
-                        "Uploaded: ",
-                        "Downloaded: ",
-                        "Active Connections: ",
-                        "Core Usage: ",
-                    ],
-                    vec!["Apple: ", "GitHub: ", "Google: ", "YouTube: "],
-                    vec![
-                        "IP: ",
-                        "ASN: ",
-                        "ISP: ",
-                        "ORG: ",
-                        "Location: ",
-                        "Timezone: ",
-                    ],
-                    vec![
-                        "Core Version: ",
-                        "System Proxy Address: ",
-                        "Mixed Port: ",
-                        "Uptime: ",
-                        "Rules Count: ",
-                    ],
-                    vec![
-                        "OS Info: ",
-                        "Auto Launch: ",
-                        "Running Mode: ",
-                        "Last Check Update: ",
-                        "Akasha Version: ",
-                    ],
-                ],
-                subscription_info: None,
-                selected_node_delay: 0,
-                sysproxy: None,
-            },
+            sysproxy: None,
+            dashboard: Dashboard::new(),
             proxies_status: ProxiesStatus {
                 group_state: ListState::default().with_selected(Some(0)),
                 group_items: mihomo_config
@@ -204,7 +155,8 @@ impl App {
 
     fn j_handler(&mut self) {
         match self.sidebar.current_page() {
-            CurrentPage::Dashboard => self.dashboard_status.j_handler(),
+            CurrentPage::Dashboard => self.dashboard.j_handle(),
+            // CurrentPage::Dashboard => self.dashboard_status.j_handler(),
             CurrentPage::Proxies => self.proxies_status.tab_switch(true),
             CurrentPage::Profiles => todo!(),
             CurrentPage::Connections => todo!(),
@@ -217,7 +169,8 @@ impl App {
 
     fn k_handler(&mut self) {
         match self.sidebar.current_page() {
-            CurrentPage::Dashboard => self.dashboard_status.k_handler(),
+            CurrentPage::Dashboard => self.dashboard.k_handle(),
+            // CurrentPage::Dashboard => self.dashboard_status.k_handler(),
             CurrentPage::Proxies => self.proxies_status.tab_switch(false),
             CurrentPage::Profiles => todo!(),
             CurrentPage::Connections => todo!(),
@@ -246,7 +199,7 @@ impl App {
     }
 
     async fn p_handler(&mut self) {
-        match &mut self.dashboard_status.sysproxy {
+        match &mut self.sysproxy {
             Some(sysproxy) => {
                 sysproxy.enable = !sysproxy.enable;
                 sysproxy.host = "127.0.0.1".into();
@@ -266,62 +219,10 @@ impl App {
         // Renderint interval
         let mut ticker = interval(Duration::from_millis(1000 / 24));
 
-        let (mut rx_traffic, mut rx_memory) = Sidebar::launch_server(self.mihomo.clone());
-
-        // ANCHOR: dashboard
-        // ANCHOR: Initialize the subscription information.
-        let (tx_subscription, mut rx_subscription) = mpsc::channel::<Option<SubscriptionInfo>>(64);
-        if self.dashboard_status.subscription_info.is_none() {
-            let url = self.akasha_config.subscription_link();
-            tokio::spawn(async move {
-                let sub_info = SubscriptionInfo::new(url).await;
-                let bundle = sub_info.ok();
-                let _ = tx_subscription.send(bundle).await;
-            });
-        }
-        // ANCHOR_END: Initialize the subscription information.
-
-        // ANCHOR: setup the selected node delay info getter
-        let (tx_node_delay, mut rx_node_delay) = mpsc::channel::<u32>(64);
-        let mihomo_node_delay = self.mihomo.clone();
-        let proxy_name = self.proxies_status.get_selected_node().clone();
-        let test_url = self.akasha_config.test_url();
-        let timeout = 5000;
-        let mut ticker_node_delay_task = interval(Duration::from_secs(5));
-        tokio::spawn(async move {
-            loop {
-                ticker_node_delay_task.tick().await;
-                let mi = mihomo_node_delay.read().await;
-                let delay = mi
-                    .delay_proxy_by_name(&proxy_name, &test_url, timeout)
-                    .await;
-                let _ = tx_node_delay.send(delay.unwrap().delay).await;
-            }
-        });
-        // ANCHOR_END: setup the selected node delay info getter
-
-        // ANCHOR: setup the system proxy status server
-        let (tx_sysproxy, mut rx_sysproxy) = mpsc::channel::<Sysproxy>(64);
-        let mut ticker_sysproxy_task = interval(Duration::from_secs(5));
-        tokio::spawn(async move {
-            loop {
-                ticker_sysproxy_task.tick().await;
-                match Sysproxy::get_system_proxy() {
-                    Ok(sysproxy) => {
-                        let _ = tx_sysproxy.send(sysproxy).await;
-                    }
-                    Err(_) => {
-                        log::info!("Something wrong with sysproxy getting.");
-                    }
-                }
-            }
-        });
-        // ANCHOR_END: setup the system proxy status server
-        // ANCHOR_END: dashboard
-
         // ANCHOR: proxies
         // ANCHOR: setup the group and proxy selected status in ui
-        let (tx_proxies, mut rx_proxies) = mpsc::channel::<Vec<usize>>(64);
+        let (tx_proxies, mut rx_proxies) = broadcast::channel::<Vec<usize>>(64);
+        let rx_proxies_dash = tx_proxies.subscribe();
         let mihomo_proxies = self.mihomo.clone();
         let proxy_group = self.proxies_status.group_items.clone();
         let proxy_items = self.proxies_status.proxy_items.clone();
@@ -347,30 +248,48 @@ impl App {
                         }
                     }
                 }
-                let _ = tx_proxies.send(selected_proxy).await;
+                let _ = tx_proxies.send(selected_proxy).unwrap();
             }
         });
         // ANCHOR_END: setup the group and proxy selected status in ui
         // ANCHOR_END: proxies
 
+        let (mut rx_traffic, mut rx_memory) = Sidebar::launch_server(self.mihomo.clone());
+        let (mut rx_subscription, mut rx_delay) = self.dashboard.launch_server(
+            &self.akasha_config,
+            self.mihomo.clone(),
+            rx_proxies_dash,
+            self.proxies_status.proxy_items[0].clone(),
+        );
+
+        // ANCHOR: setup the system proxy status server
+        let (tx_sysproxy, mut rx_sysproxy) = mpsc::channel::<Sysproxy>(64);
+        let mut ticker_sysproxy_task = interval(Duration::from_secs(5));
+        tokio::spawn(async move {
+            loop {
+                ticker_sysproxy_task.tick().await;
+                match Sysproxy::get_system_proxy() {
+                    Ok(sysproxy) => {
+                        let _ = tx_sysproxy.send(sysproxy).await;
+                    }
+                    Err(_) => {
+                        log::info!("Something wrong with sysproxy getting.");
+                    }
+                }
+            }
+        });
+        // ANCHOR_END: setup the system proxy status server
+        // ANCHOR_END: dashboard
+
         while self.running {
             tokio::select! {
                 _ = ticker.tick() => {
-                    // Initialize subscription
-                    if let Ok(bundle) = rx_subscription.try_recv() {
-                        self.dashboard_status.subscription_info = bundle;
-                    }
-
                     self.sidebar.sync_client(&mut rx_traffic, &mut rx_memory);
-
-                    if let Ok(value) = rx_node_delay.try_recv() {
-                        log::info!("Selected node delay: {}", value);
-                        self.dashboard_status.selected_node_delay = value;
-                    }
+                    self.dashboard.sync_client(&mut rx_subscription, &mut rx_delay);
 
                     if let Ok(value) = rx_sysproxy.try_recv() {
                         log::trace!("Sysproxy try_recv(): {:?}", value);
-                        self.dashboard_status.sysproxy = Some(value);
+                        self.sysproxy = Some(value);
                     }
 
                     // proxies selected status thread recv
@@ -410,8 +329,6 @@ impl App {
 
     /// Reads the crossterm events and updates the state of [`App`].
     async fn handle_crossterm_events(&mut self, evt: Event) -> color_eyre::Result<()> {
-        // let event = self.event_stream.next().fuse().await;
-        // match event {
         match evt {
             Event::Key(key) if key.kind == KeyEventKind::Press => self.on_key_event(key).await,
             Event::Mouse(_) => {}

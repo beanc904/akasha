@@ -9,16 +9,6 @@ enum CurrentPage {
     Settings,
 }
 
-struct DashboardStatus {
-    scrollbar_pos: usize,
-    viewport_height: u16,
-    titles: Vec<&'static str>,
-    sublabels: Vec<Vec<&'static str>>,
-    subscription_info: Option<SubscriptionInfo>,
-    selected_node_delay: u32,
-    sysproxy: Option<Sysproxy>,
-}
-
 struct ProxiesStatus {
     group_state: ListState,
     group_items: Vec<(String, usize)>,

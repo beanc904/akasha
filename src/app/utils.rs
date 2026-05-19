@@ -5,70 +5,7 @@ use akasha::client::mihomo::Mihomo;
 use ratatui::widgets::ListState;
 use tokio::sync::RwLock;
 
-use crate::app::{DashboardStatus, LogsStatus, ProxiesStatus};
-
-impl DashboardStatus {
-    pub(super) fn get_updatetime(&self) -> String {
-        match &self.subscription_info {
-            Some(subscription) => {
-                let update_time = subscription.get_updatetime();
-                format!("{:?}", update_time)
-            }
-            None => {
-                format!("time err")
-            }
-        }
-    }
-
-    pub(super) fn get_usage(&self) -> String {
-        match &self.subscription_info {
-            Some(subscription) => {
-                let usage = subscription.parse_usage();
-                if let Some(usage) = usage {
-                    format!(
-                        "{} MB / {} MB",
-                        (usage.download + usage.upload) / 1024 / 1024,
-                        usage.total / 1024 / 1024
-                    )
-                } else {
-                    format!("usage err")
-                }
-            }
-            None => {
-                format!("usage err")
-            }
-        }
-    }
-
-    pub(super) fn j_handler(&mut self) {
-        let max = self.get_posmax();
-        let step = 1;
-        let pos = &mut self.scrollbar_pos;
-        if *pos >= max {
-            *pos = max;
-        } else {
-            *pos += step;
-        }
-    }
-
-    pub(super) fn k_handler(&mut self) {
-        // let max = 43 - 1;
-        let step = 1;
-        let pos = &mut self.scrollbar_pos;
-        if *pos == 0 || (*pos as i32 - step as i32) < 0 {
-            *pos = 0;
-        } else {
-            *pos -= step;
-        }
-    }
-
-    pub(super) fn get_posmax(&self) -> usize {
-        let para_lines: usize = self.sublabels.iter().map(|row| row.len()).sum();
-        let title_lines = self.titles.len();
-        let total_lines = para_lines + title_lines;
-        total_lines - self.viewport_height as usize + 2
-    }
-}
+use crate::app::{LogsStatus, ProxiesStatus};
 
 impl ProxiesStatus {
     pub(super) fn tab_switch(&mut self, is_next: bool) {
