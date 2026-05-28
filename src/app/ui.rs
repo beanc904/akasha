@@ -1,7 +1,7 @@
 mod logs;
-mod proxies;
+// mod proxies;
 use logs::*;
-use proxies::*;
+// use proxies::*;
 
 pub mod components;
 pub mod widgets;
@@ -31,12 +31,13 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
     match app.sidebar.current_page() {
         CurrentPage::Dashboard => {
             app.dashboard
-                .update(app.sysproxy.clone(), app.proxies_status.get_selected_node());
+                .update(app.sysproxy.clone(), app.proxies.current_proxy());
             app.dashboard
                 .draw(frame, layout_root[1], app.akasha_config.subscription_link());
         }
         CurrentPage::Proxies => {
-            render_proxies(app, frame, &layout_root);
+            // render_proxies(app, frame, &layout_root);
+            app.proxies.draw(frame, layout_root[1]);
         }
         CurrentPage::Profiles => {
             frame.render_widget(

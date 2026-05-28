@@ -111,11 +111,11 @@ impl Dashboard {
         self.current_node = Some(current_node);
     }
 
-    pub fn j_handle(&mut self) {
+    pub fn j_handler(&mut self) {
         self.scrolltext.j_handler();
     }
 
-    pub fn k_handle(&mut self) {
+    pub fn k_handler(&mut self) {
         self.scrolltext.k_handler();
     }
 
@@ -145,8 +145,7 @@ impl Dashboard {
         &self,
         akasha_config: &AkashaConfig,
         mihomo: Arc<RwLock<Mihomo>>,
-        mut rx_proxies: broadcast::Receiver<Vec<usize>>,
-        head_group: Vec<String>,
+        mut rx_proxies: broadcast::Receiver<Vec<String>>,
     ) -> (Receiver<Option<SubscriptionInfo>>, Receiver<u32>) {
         // ANCHOR: Initialize the subscription information.
         let (tx_subscription, rx_subscription) = mpsc::channel::<Option<SubscriptionInfo>>(64);
@@ -170,8 +169,7 @@ impl Dashboard {
                 ticker_node_delay_task.tick().await;
                 let mi = mihomo.read().await;
                 if let Ok(value) = rx_proxies.try_recv() {
-                    let node = head_group.get(value[0]).unwrap();
-                    let delay = mi.delay_proxy_by_name(&node, &test_url, timeout).await;
+                    let delay = mi.delay_proxy_by_name(&value[0], &test_url, timeout).await;
                     let _ = tx_node_delay.send(delay.unwrap().delay).await;
                 }
             }

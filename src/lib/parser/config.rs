@@ -12,18 +12,18 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize)]
 pub struct MihomoConfig {
     #[serde(rename = "proxy-groups")]
-    proxy_groups: Vec<ProxyGroup>,
+    pub proxy_groups: Vec<ProxyGroup>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct ProxyGroup {
-    name: String,
+    pub name: String,
 
     #[allow(unused)]
     #[serde(rename = "type")]
-    group_type: String,
+    pub group_type: String,
 
-    proxies: Vec<String>,
+    pub proxies: Vec<String>,
 }
 
 impl MihomoConfig {
