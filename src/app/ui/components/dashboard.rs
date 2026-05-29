@@ -4,6 +4,7 @@ use akasha::{
     client::mihomo::Mihomo,
     parser::{config::AkashaConfig, request::SubscriptionInfo},
 };
+use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     prelude::*,
     widgets::{Block, Borders},
@@ -106,18 +107,26 @@ impl Dashboard {
         }
     }
 
+    pub fn handle_key_event(&mut self, key: KeyEvent) {
+        match (key.modifiers, key.code) {
+            (_, KeyCode::Char('j')) => self.scrolltext.j_handler(),
+            (_, KeyCode::Char('k')) => self.scrolltext.k_handler(),
+            _ => {}
+        }
+    }
+
     pub fn update(&mut self, sysproxy: Option<Sysproxy>, current_node: String) {
         self.sysproxy = sysproxy;
         self.current_node = Some(current_node);
     }
 
-    pub fn j_handler(&mut self) {
-        self.scrolltext.j_handler();
-    }
+    // pub fn j_handler(&mut self) {
+    //     self.scrolltext.j_handler();
+    // }
 
-    pub fn k_handler(&mut self) {
-        self.scrolltext.k_handler();
-    }
+    // pub fn k_handler(&mut self) {
+    //     self.scrolltext.k_handler();
+    // }
 
     fn get_updatetime(&self) -> String {
         match &self.subscription_info {

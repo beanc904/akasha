@@ -90,116 +90,116 @@ impl App {
         }
     }
 
-    // ANCHOR: key handler events
-    async fn enter_handler(&mut self) {
-        match self.sidebar.current_page() {
-            CurrentPage::Dashboard => todo!(),
-            CurrentPage::Proxies => self.proxies.enter_handler(self.mihomo.clone()).await,
-            CurrentPage::Profiles => todo!(),
-            CurrentPage::Connections => todo!(),
-            CurrentPage::Rules => todo!(),
-            CurrentPage::Logs => todo!(),
-            CurrentPage::Test => todo!(),
-            CurrentPage::Settings => todo!(),
-        }
-    }
+    // // ANCHOR: key handler events
+    // async fn enter_handler(&mut self) {
+    //     match self.sidebar.current_page() {
+    //         CurrentPage::Dashboard => todo!(),
+    //         CurrentPage::Proxies => self.proxies.enter_handler(self.mihomo.clone()).await,
+    //         CurrentPage::Profiles => todo!(),
+    //         CurrentPage::Connections => todo!(),
+    //         CurrentPage::Rules => todo!(),
+    //         CurrentPage::Logs => todo!(),
+    //         CurrentPage::Test => todo!(),
+    //         CurrentPage::Settings => todo!(),
+    //     }
+    // }
 
-    fn esc_handler(&mut self) {
-        match self.sidebar.current_page() {
-            CurrentPage::Dashboard => todo!(),
-            CurrentPage::Proxies => self.proxies.esc_handler(),
-            CurrentPage::Profiles => todo!(),
-            CurrentPage::Connections => todo!(),
-            CurrentPage::Rules => todo!(),
-            CurrentPage::Logs => todo!(),
-            CurrentPage::Test => todo!(),
-            CurrentPage::Settings => todo!(),
-        }
-    }
+    // fn esc_handler(&mut self) {
+    //     match self.sidebar.current_page() {
+    //         CurrentPage::Dashboard => todo!(),
+    //         CurrentPage::Proxies => self.proxies.esc_handler(),
+    //         CurrentPage::Profiles => todo!(),
+    //         CurrentPage::Connections => todo!(),
+    //         CurrentPage::Rules => todo!(),
+    //         CurrentPage::Logs => todo!(),
+    //         CurrentPage::Test => todo!(),
+    //         CurrentPage::Settings => todo!(),
+    //     }
+    // }
 
-    fn l_handler(&mut self) {
-        match self.sidebar.current_page() {
-            CurrentPage::Dashboard => todo!(),
-            CurrentPage::Proxies => self.proxies.l_handler(),
-            CurrentPage::Profiles => todo!(),
-            CurrentPage::Connections => todo!(),
-            CurrentPage::Rules => todo!(),
-            CurrentPage::Logs => todo!(),
-            CurrentPage::Test => todo!(),
-            CurrentPage::Settings => todo!(),
-        }
-    }
+    // fn l_handler(&mut self) {
+    //     match self.sidebar.current_page() {
+    //         CurrentPage::Dashboard => todo!(),
+    //         CurrentPage::Proxies => self.proxies.l_handler(),
+    //         CurrentPage::Profiles => todo!(),
+    //         CurrentPage::Connections => todo!(),
+    //         CurrentPage::Rules => todo!(),
+    //         CurrentPage::Logs => todo!(),
+    //         CurrentPage::Test => todo!(),
+    //         CurrentPage::Settings => todo!(),
+    //     }
+    // }
 
-    fn h_handler(&mut self) {
-        match self.sidebar.current_page() {
-            CurrentPage::Dashboard => todo!(),
-            CurrentPage::Proxies => self.proxies.h_handler(),
-            CurrentPage::Profiles => todo!(),
-            CurrentPage::Connections => todo!(),
-            CurrentPage::Rules => todo!(),
-            CurrentPage::Logs => todo!(),
-            CurrentPage::Test => todo!(),
-            CurrentPage::Settings => todo!(),
-        }
-    }
+    // fn h_handler(&mut self) {
+    //     match self.sidebar.current_page() {
+    //         CurrentPage::Dashboard => todo!(),
+    //         CurrentPage::Proxies => self.proxies.h_handler(),
+    //         CurrentPage::Profiles => todo!(),
+    //         CurrentPage::Connections => todo!(),
+    //         CurrentPage::Rules => todo!(),
+    //         CurrentPage::Logs => todo!(),
+    //         CurrentPage::Test => todo!(),
+    //         CurrentPage::Settings => todo!(),
+    //     }
+    // }
 
-    fn j_handler(&mut self) {
-        match self.sidebar.current_page() {
-            CurrentPage::Dashboard => self.dashboard.j_handler(),
-            CurrentPage::Proxies => self.proxies.j_handler(),
-            CurrentPage::Profiles => todo!(),
-            CurrentPage::Connections => todo!(),
-            CurrentPage::Rules => todo!(),
-            CurrentPage::Logs => self.logs.j_handler(),
-            CurrentPage::Test => todo!(),
-            CurrentPage::Settings => todo!(),
-        }
-    }
+    // fn j_handler(&mut self) {
+    //     match self.sidebar.current_page() {
+    //         CurrentPage::Dashboard => self.dashboard.j_handler(),
+    //         CurrentPage::Proxies => self.proxies.j_handler(),
+    //         CurrentPage::Profiles => todo!(),
+    //         CurrentPage::Connections => todo!(),
+    //         CurrentPage::Rules => todo!(),
+    //         CurrentPage::Logs => self.logs.j_handler(),
+    //         CurrentPage::Test => todo!(),
+    //         CurrentPage::Settings => todo!(),
+    //     }
+    // }
 
-    fn k_handler(&mut self) {
-        match self.sidebar.current_page() {
-            CurrentPage::Dashboard => self.dashboard.k_handler(),
-            CurrentPage::Proxies => self.proxies.k_handler(),
-            CurrentPage::Profiles => todo!(),
-            CurrentPage::Connections => todo!(),
-            CurrentPage::Rules => todo!(),
-            CurrentPage::Logs => self.logs.k_handler(),
-            CurrentPage::Test => todo!(),
-            CurrentPage::Settings => todo!(),
-        }
-    }
+    // fn k_handler(&mut self) {
+    //     match self.sidebar.current_page() {
+    //         CurrentPage::Dashboard => self.dashboard.k_handler(),
+    //         CurrentPage::Proxies => self.proxies.k_handler(),
+    //         CurrentPage::Profiles => todo!(),
+    //         CurrentPage::Connections => todo!(),
+    //         CurrentPage::Rules => todo!(),
+    //         CurrentPage::Logs => self.logs.k_handler(),
+    //         CurrentPage::Test => todo!(),
+    //         CurrentPage::Settings => todo!(),
+    //     }
+    // }
 
-    async fn d_handler(&mut self) {
-        match self.sidebar.current_page() {
-            CurrentPage::Dashboard => todo!(),
-            CurrentPage::Proxies => {
-                self.proxies
-                    .d_handler(self.mihomo.clone(), self.akasha_config.test_url())
-                    .await
-            }
-            CurrentPage::Profiles => todo!(),
-            CurrentPage::Connections => todo!(),
-            CurrentPage::Rules => todo!(),
-            CurrentPage::Logs => todo!(),
-            CurrentPage::Test => todo!(),
-            CurrentPage::Settings => todo!(),
-        }
-    }
+    // async fn d_handler(&mut self) {
+    //     match self.sidebar.current_page() {
+    //         CurrentPage::Dashboard => todo!(),
+    //         CurrentPage::Proxies => {
+    //             self.proxies
+    //                 .d_handler(self.mihomo.clone(), self.akasha_config.test_url())
+    //                 .await
+    //         }
+    //         CurrentPage::Profiles => todo!(),
+    //         CurrentPage::Connections => todo!(),
+    //         CurrentPage::Rules => todo!(),
+    //         CurrentPage::Logs => todo!(),
+    //         CurrentPage::Test => todo!(),
+    //         CurrentPage::Settings => todo!(),
+    //     }
+    // }
 
-    async fn p_handler(&mut self) {
-        match &mut self.sysproxy {
-            Some(sysproxy) => {
-                sysproxy.enable = !sysproxy.enable;
-                sysproxy.host = "127.0.0.1".into();
-                sysproxy.port = 7890;
+    // async fn p_handler(&mut self) {
+    //     match &mut self.sysproxy {
+    //         Some(sysproxy) => {
+    //             sysproxy.enable = !sysproxy.enable;
+    //             sysproxy.host = "127.0.0.1".into();
+    //             sysproxy.port = 7890;
 
-                sysproxy.set_system_proxy().unwrap();
-                log::info!("Switched the system proxy status: {:?}", sysproxy);
-            }
-            None => log::error!("Something wrong with [`Sysproxy`] getting."),
-        }
-    }
-    // ANCHOR_END: key handler events
+    //             sysproxy.set_system_proxy().unwrap();
+    //             log::info!("Switched the system proxy status: {:?}", sysproxy);
+    //         }
+    //         None => log::error!("Something wrong with [`Sysproxy`] getting."),
+    //     }
+    // }
+    // // ANCHOR_END: key handler events
 
     /// Run the application's main loop.
     pub async fn run(mut self, mut terminal: DefaultTerminal) -> color_eyre::Result<()> {
@@ -280,20 +280,34 @@ impl App {
             | (KeyModifiers::CONTROL, KeyCode::Char('c') | KeyCode::Char('C')) => self.quit(),
             (_, KeyCode::Tab) => self.sidebar.tab_next(),
             (_, KeyCode::BackTab) => self.sidebar.tab_pre(),
-            (_, KeyCode::Char('j')) => self.j_handler(),
-            (_, KeyCode::Char('k')) => self.k_handler(),
-            (_, KeyCode::Char('h')) => self.h_handler(),
-            (_, KeyCode::Char('l')) => self.l_handler(),
-            (_, KeyCode::Enter) => self.enter_handler().await,
-            (_, KeyCode::Esc) => self.esc_handler(),
-            (_, KeyCode::Char('d')) => self.d_handler().await,
-            (_, KeyCode::Char('p')) => self.p_handler().await,
             (_, KeyCode::Char(c @ '1'..='8')) => {
                 let idx = (c as u8 - b'1') as usize;
                 self.sidebar.tab_switch(idx);
             }
+            // (_, KeyCode::Char('j')) => self.j_handler(),
+            // (_, KeyCode::Char('k')) => self.k_handler(),
+            // (_, KeyCode::Char('h')) => self.h_handler(),
+            // (_, KeyCode::Char('l')) => self.l_handler(),
+            // (_, KeyCode::Enter) => self.enter_handler().await,
+            // (_, KeyCode::Esc) => self.esc_handler(),
+            // (_, KeyCode::Char('d')) => self.d_handler().await,
+            // (_, KeyCode::Char('p')) => self.p_handler().await,
+
             // Add other key handlers here.
-            _ => {}
+            _ => match self.sidebar.current_page() {
+                CurrentPage::Dashboard => self.dashboard.handle_key_event(key),
+                CurrentPage::Proxies => {
+                    self.proxies
+                        .handle_key_event(key, self.mihomo.clone(), self.akasha_config.test_url())
+                        .await
+                }
+                CurrentPage::Profiles => {}
+                CurrentPage::Connections => {}
+                CurrentPage::Rules => {}
+                CurrentPage::Logs => self.logs.handle_key_event(key),
+                CurrentPage::Test => {}
+                CurrentPage::Settings => {}
+            },
         }
     }
 

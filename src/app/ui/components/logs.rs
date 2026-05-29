@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use aka_logger::LogStore;
+use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     prelude::*,
     widgets::{Block, Borders},
@@ -21,13 +22,21 @@ impl Logs {
         }
     }
 
-    pub fn j_handler(&mut self) {
-        self.scrollview.j_handler();
+    pub fn handle_key_event(&mut self, key: KeyEvent) {
+        match (key.modifiers, key.code) {
+            (_, KeyCode::Char('j')) => self.scrollview.j_handler(),
+            (_, KeyCode::Char('k')) => self.scrollview.k_handler(),
+            _ => {}
+        }
     }
 
-    pub fn k_handler(&mut self) {
-        self.scrollview.k_handler();
-    }
+    // pub fn j_handler(&mut self) {
+    //     self.scrollview.j_handler();
+    // }
+
+    // pub fn k_handler(&mut self) {
+    //     self.scrollview.k_handler();
+    // }
 }
 
 impl Component for Logs {

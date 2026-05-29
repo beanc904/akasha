@@ -1,6 +1,7 @@
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use akasha::{client::mihomo::Mihomo, parser::config::ProxyGroup};
+use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     prelude::*,
     widgets::{
@@ -76,7 +77,24 @@ impl Proxies {
         self.groups[0].subitems[current_idx].name.clone()
     }
 
-    pub async fn enter_handler(&mut self, mihomo: Arc<RwLock<Mihomo>>) {
+    pub async fn handle_key_event(
+        &mut self,
+        key: KeyEvent,
+        mihomo: Arc<RwLock<Mihomo>>,
+        test_url: String,
+    ) {
+        match (key.modifiers, key.code) {
+            (_, KeyCode::Enter) => self.enter_handler(mihomo).await,
+            (_, KeyCode::Esc | KeyCode::Char('h')) => self.focus = Focus::Group,
+            (_, KeyCode::Char('l')) => self.focus = Focus::Proxy,
+            (_, KeyCode::Char('j')) => self.j_handler(),
+            (_, KeyCode::Char('k')) => self.k_handler(),
+            (_, KeyCode::Char('d')) => self.d_handler(mihomo, test_url).await,
+            _ => {}
+        }
+    }
+
+    async fn enter_handler(&mut self, mihomo: Arc<RwLock<Mihomo>>) {
         match self.focus {
             Focus::Group => self.focus = Focus::Proxy,
             Focus::Proxy => {
@@ -89,19 +107,19 @@ impl Proxies {
         }
     }
 
-    pub fn esc_handler(&mut self) {
-        self.focus = Focus::Group;
-    }
+    // pub fn esc_handler(&mut self) {
+    //     self.focus = Focus::Group;
+    // }
 
-    pub fn l_handler(&mut self) {
-        self.focus = Focus::Proxy;
-    }
+    // pub fn l_handler(&mut self) {
+    //     self.focus = Focus::Proxy;
+    // }
 
-    pub fn h_handler(&mut self) {
-        self.focus = Focus::Group;
-    }
+    // pub fn h_handler(&mut self) {
+    //     self.focus = Focus::Group;
+    // }
 
-    pub fn j_handler(&mut self) {
+    fn j_handler(&mut self) {
         match self.focus {
             Focus::Group => {
                 np_switch(true, &mut self.state.0, self.groups.len());
@@ -118,7 +136,7 @@ impl Proxies {
         }
     }
 
-    pub fn k_handler(&mut self) {
+    fn k_handler(&mut self) {
         match self.focus {
             Focus::Group => {
                 np_switch(false, &mut self.state.0, self.groups.len());
@@ -135,7 +153,7 @@ impl Proxies {
         }
     }
 
-    pub async fn d_handler(&mut self, mihomo: Arc<RwLock<Mihomo>>, test_url: String) {
+    async fn d_handler(&mut self, mihomo: Arc<RwLock<Mihomo>>, test_url: String) {
         let (tx_delay, rx_delay) = mpsc::channel::<(HashMap<String, u32>, usize)>(64);
         let group_idx = self.state.0.selected().unwrap();
         let group_name = self.groups[group_idx].name.clone();
