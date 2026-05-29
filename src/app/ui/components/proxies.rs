@@ -107,18 +107,6 @@ impl Proxies {
         }
     }
 
-    // pub fn esc_handler(&mut self) {
-    //     self.focus = Focus::Group;
-    // }
-
-    // pub fn l_handler(&mut self) {
-    //     self.focus = Focus::Proxy;
-    // }
-
-    // pub fn h_handler(&mut self) {
-    //     self.focus = Focus::Group;
-    // }
-
     fn j_handler(&mut self) {
         match self.focus {
             Focus::Group => {

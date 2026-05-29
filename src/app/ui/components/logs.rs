@@ -29,14 +29,6 @@ impl Logs {
             _ => {}
         }
     }
-
-    // pub fn j_handler(&mut self) {
-    //     self.scrollview.j_handler();
-    // }
-
-    // pub fn k_handler(&mut self) {
-    //     self.scrollview.k_handler();
-    // }
 }
 
 impl Component for Logs {

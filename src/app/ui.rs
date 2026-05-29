@@ -59,7 +59,7 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
         }
         CurrentPage::Test => {
             frame.render_widget(
-                Paragraph::new(format!("Here is the debug information:\n{}", "debug"))
+                Paragraph::new("Now it is selecting test.")
                     .block(Block::new().borders(Borders::ALL)),
                 layout_root[1],
             );

@@ -120,14 +120,6 @@ impl Dashboard {
         self.current_node = Some(current_node);
     }
 
-    // pub fn j_handler(&mut self) {
-    //     self.scrolltext.j_handler();
-    // }
-
-    // pub fn k_handler(&mut self) {
-    //     self.scrolltext.k_handler();
-    // }
-
     fn get_updatetime(&self) -> String {
         match &self.subscription_info {
             Some(time) => format!("{:?}", time.get_updatetime()),

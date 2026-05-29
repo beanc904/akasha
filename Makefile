@@ -30,7 +30,7 @@ release:
 # ANCHOR_END: Project debug commands
 
 test:
-	@echo -e "$(BLUE)[INFO]$(NC): Creating dir [\`$@\`]"
+	@printf "$(BLUE)[INFO]$(NC): Creating dir [\`$@\`]\n"
 
 # ANCHOR: [`prebuild`] target
 prebuild: \
@@ -38,26 +38,26 @@ prebuild: \
 		$(GEOSITE_DAT) \
 		$(GEOIP_DAT) \
 		$(MIHOMO_BIN)
-		@echo -e "$(GREEN)[SUCCESS]:$(NC) Finishing prebuild process!"
+		@printf "$(GREEN)[SUCCESS]:$(NC) Finishing prebuild process!\n"
 
 $(ARTIFACTS):
-	@echo -e "$(BLUE)[INFO]:$(NC) Creating dir [\`$@\`]"
+	@printf "$(BLUE)[INFO]:$(NC) Creating dir [\`$@\`]\n"
 	@mkdir -p $(ARTIFACTS)
 
 $(COUNTRY_MMDB): | $(ARTIFACTS)
-	@echo -e "$(BLUE)[INFO]:$(NC) Downloading $(META_RULES_BASE)/country.mmdb"
+	@printf "$(BLUE)[INFO]:$(NC) Downloading $(META_RULES_BASE)/country.mmdb\n"
 	@curl -L \
 		-o $@ \
 		$(META_RULES_BASE)/country.mmdb
 
 $(GEOSITE_DAT): | $(ARTIFACTS)
-	@echo -e "$(BLUE)[INFO]:$(NC) Downloading $(META_RULES_BASE)/geosite.dat"
+	@printf "$(BLUE)[INFO]:$(NC) Downloading $(META_RULES_BASE)/geosite.dat\n"
 	@curl -L \
 		-o $@ \
 		$(META_RULES_BASE)/geosite.dat
 
 $(GEOIP_DAT): | $(ARTIFACTS)
-	@echo -e "$(BLUE)[INFO]:$(NC) Downloading $(META_RULES_BASE)/geoip.dat"
+	@printf "$(BLUE)[INFO]:$(NC) Downloading $(META_RULES_BASE)/geoip.dat\n"
 	@curl -L \
 		-o $@ \
 		$(META_RULES_BASE)/geoip.dat
@@ -69,11 +69,11 @@ $(MIHOMO_GZ): | $(ARTIFACTS)
 		grep 'mihomo-linux-amd64-v2-v.*\.gz"' | \
 		cut -d '"' -f 4 \
 	); \
-	echo -e "$(BLUE)[INFO]:$(NC) Downloading $$url"; \
+	printf "$(BLUE)[INFO]:$(NC) Downloading $$url\n"; \
 	curl -fL -o $@ "$$url"
 
 $(MIHOMO_BIN): $(MIHOMO_GZ)
-	@echo -e "$(BLUE)[INFO]:$(NC) Extracting $@"
+	@printf "$(BLUE)[INFO]:$(NC) Extracting $@\n"
 	@gzip -dc $< > $@
 	@chmod +x $@
 # ANCHOR_END: [`prebuild`] target
