@@ -3,29 +3,25 @@ use ratatui::{
     widgets::{Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap},
 };
 
-pub struct ScrollText {
+pub struct ScrollView {
     step: usize,
-    content: Vec<Line<'static>>,
+    content_length: usize,
     viewport_height: usize,
     state: ScrollbarState,
 }
 
-impl ScrollText {
-    pub fn new(step: usize, content: Vec<Line<'static>>) -> Self {
+impl ScrollView {
+    pub fn new(step: usize) -> Self {
         Self {
             step,
-            content,
+            content_length: 0,
             viewport_height: 0,
             state: ScrollbarState::default(),
         }
     }
 
-    pub fn content(&mut self, content: Vec<Line<'static>>) {
-        self.content = content;
-    }
-
     fn pos_max(&self) -> usize {
-        self.content.len().saturating_sub(self.viewport_height) + 2
+        self.content_length.saturating_sub(self.viewport_height) + 2
     }
 
     fn reset_state(&mut self, length: usize) {
@@ -57,14 +53,15 @@ impl ScrollText {
         }
     }
 
-    pub fn render(&mut self, frame: &mut Frame, area: Rect) {
+    pub fn render(&mut self, frame: &mut Frame, area: Rect, content: Vec<Line>) {
+        self.content_length = content.len();
         self.viewport_height = area.height as usize;
         self.reset_state(self.pos_max());
 
         let [para_area, scrollbar_area] =
             Layout::horizontal([Constraint::Min(0), Constraint::Length(1)]).areas(area);
 
-        let paragraph = Paragraph::new(self.content.clone())
+        let paragraph = Paragraph::new(content)
             .scroll((self.state.get_position() as u16, 0))
             .wrap(Wrap { trim: true });
         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight);

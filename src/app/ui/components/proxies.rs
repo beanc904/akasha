@@ -299,8 +299,8 @@ impl Component for Proxies {
             .scroll_padding(2);
 
         let scrollbar_widget = Scrollbar::new(ScrollbarOrientation::VerticalRight);
-        let mut scroll_state =
-            ScrollbarState::new(self.groups[groups_state_idx].subitems.len()).position(current_idx);
+        let mut scroll_state = ScrollbarState::new(self.groups[groups_state_idx].subitems.len())
+            .position(self.state.1.selected().unwrap());
 
         frame.render_widget(root_block, area);
         frame.render_stateful_widget(groups_widget, groups_area, &mut self.state.0);

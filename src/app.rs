@@ -1,17 +1,14 @@
 mod ui;
-mod utils;
 
-use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use aka_logger::{AkaLogger, LogStore, LoggerConfig};
+use aka_logger::{AkaLogger, LoggerConfig};
 use akasha::client::mihomo::Mihomo;
 use crossterm::event::{Event, EventStream, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use futures::StreamExt;
 use log::LevelFilter;
 use ratatui::DefaultTerminal;
-use ratatui::widgets::ListState;
 use sysproxy::Sysproxy;
 use tokio::sync::{RwLock, mpsc};
 use tokio::time::{Duration, interval};
@@ -20,11 +17,21 @@ use akasha::client as ac;
 use akasha::parser::config::{AkashaConfig, MihomoConfig};
 
 use crate::app::ui::components::dashboard::Dashboard;
+use crate::app::ui::components::logs::Logs;
 use crate::app::ui::components::proxies::Proxies;
 use crate::app::ui::components::sidebar::Sidebar;
 use crate::pkginfo::PkgInfo;
 
-include!("app/statetypes.rs");
+enum CurrentPage {
+    Dashboard,
+    Proxies,
+    Profiles,
+    Connections,
+    Rules,
+    Logs,
+    Test,
+    Settings,
+}
 
 pub struct App {
     /// Is the application running?
@@ -43,10 +50,7 @@ pub struct App {
     sidebar: Sidebar,
     dashboard: Dashboard,
     proxies: Proxies,
-    // sidebar_status: SidebarStatus,
-    // dashboard_status: DashboardStatus,
-    // proxies_status: ProxiesStatus,
-    logs_status: LogsStatus,
+    logs: Logs,
 }
 
 impl App {
@@ -75,29 +79,12 @@ impl App {
             sysproxy: None,
             dashboard: Dashboard::new(),
             proxies: Proxies::new(&mihomo_config.proxy_groups),
-            // proxies_status: ProxiesStatus {
-            //     group_state: ListState::default().with_selected(Some(0)),
-            //     group_items: mihomo_config
-            //         .groups_name()
-            //         .into_iter()
-            //         .map(|name| (name, 0))
-            //         .collect(),
-            //     proxy_state: ListState::default().with_selected(Some(0)),
-            //     proxy_items: mihomo_config.groups_proxies(),
-            //     proxy_focus: false,
-            //     delay: vec![None; mihomo_config.group_count()],
-            //     delay_mpsc: mpsc::channel::<(Option<HashMap<String, u32>>, usize)>(64),
-            // },
-            logs_status: LogsStatus {
-                log_state: AkaLogger::init(LoggerConfig {
-                    buf_capacity: 10,
-                    level: LevelFilter::Info,
-                    with_stdout: true,
-                    log_path: PathBuf::from("debug/info.log").into_boxed_path(),
-                }),
-                scrollbar_pos: (0, 0),
-                step_len: 3,
-            },
+            logs: Logs::new(AkaLogger::init(LoggerConfig {
+                buf_capacity: 10,
+                level: LevelFilter::Info,
+                with_stdout: true,
+                log_path: PathBuf::from("debug/info.log").into_boxed_path(),
+            })),
             akasha_config,
             pkginfo,
         }
@@ -137,7 +124,7 @@ impl App {
             CurrentPage::Profiles => todo!(),
             CurrentPage::Connections => todo!(),
             CurrentPage::Rules => todo!(),
-            CurrentPage::Logs => self.logs_status.l_handler(),
+            CurrentPage::Logs => todo!(),
             CurrentPage::Test => todo!(),
             CurrentPage::Settings => todo!(),
         }
@@ -150,7 +137,7 @@ impl App {
             CurrentPage::Profiles => todo!(),
             CurrentPage::Connections => todo!(),
             CurrentPage::Rules => todo!(),
-            CurrentPage::Logs => self.logs_status.h_handler(),
+            CurrentPage::Logs => todo!(),
             CurrentPage::Test => todo!(),
             CurrentPage::Settings => todo!(),
         }
@@ -159,12 +146,11 @@ impl App {
     fn j_handler(&mut self) {
         match self.sidebar.current_page() {
             CurrentPage::Dashboard => self.dashboard.j_handler(),
-            // CurrentPage::Dashboard => self.dashboard_status.j_handler(),
             CurrentPage::Proxies => self.proxies.j_handler(),
             CurrentPage::Profiles => todo!(),
             CurrentPage::Connections => todo!(),
             CurrentPage::Rules => todo!(),
-            CurrentPage::Logs => self.logs_status.j_handler(),
+            CurrentPage::Logs => self.logs.j_handler(),
             CurrentPage::Test => todo!(),
             CurrentPage::Settings => todo!(),
         }
@@ -173,12 +159,11 @@ impl App {
     fn k_handler(&mut self) {
         match self.sidebar.current_page() {
             CurrentPage::Dashboard => self.dashboard.k_handler(),
-            // CurrentPage::Dashboard => self.dashboard_status.k_handler(),
             CurrentPage::Proxies => self.proxies.k_handler(),
             CurrentPage::Profiles => todo!(),
             CurrentPage::Connections => todo!(),
             CurrentPage::Rules => todo!(),
-            CurrentPage::Logs => self.logs_status.k_handler(),
+            CurrentPage::Logs => self.logs.k_handler(),
             CurrentPage::Test => todo!(),
             CurrentPage::Settings => todo!(),
         }
@@ -222,40 +207,6 @@ impl App {
         // Renderint interval
         let mut ticker = interval(Duration::from_millis(1000 / 24));
 
-        // // ANCHOR: proxies
-        // // ANCHOR: setup the group and proxy selected status in ui
-        // let (tx_proxies, mut rx_proxies) = broadcast::channel::<Vec<usize>>(64);
-        // let rx_proxies_dash = tx_proxies.subscribe();
-        // let mihomo_proxies = self.mihomo.clone();
-        // let proxy_group = self.proxies_status.group_items.clone();
-        // let proxy_items = self.proxies_status.proxy_items.clone();
-        // // Set the interval of the proxy async check task.
-        // let mut ticker_proxy_task = interval(Duration::from_secs(5));
-        // tokio::spawn(async move {
-        //     loop {
-        //         ticker_proxy_task.tick().await;
-        //         let mut selected_proxy: Vec<usize> = vec![];
-        //         let mi = mihomo_proxies.read().await;
-        //         for (i, group) in proxy_group.iter().enumerate() {
-        //             // Because there is a loop using of mihomo,
-        //             // via function from mihomo itself will be better.
-        //             let proxy = mi.get_proxy_by_name(group.0.as_str()).await;
-        //             if let Ok(proxy) = proxy {
-        //                 match proxy.now {
-        //                     Some(now) => {
-        //                         let index =
-        //                             proxy_items[i].iter().position(|name| name == &now).unwrap();
-        //                         selected_proxy.push(index);
-        //                     }
-        //                     None => {}
-        //                 }
-        //             }
-        //         }
-        //         let _ = tx_proxies.send(selected_proxy).unwrap();
-        //     }
-        // });
-        // // ANCHOR_END: setup the group and proxy selected status in ui
-        // // ANCHOR_END: proxies
         let (mut rx_proxies, rx_proxies_dash) = self.proxies.launch_server(self.mihomo.clone());
 
         let (mut rx_traffic, mut rx_memory) = Sidebar::launch_server(self.mihomo.clone());
@@ -294,25 +245,6 @@ impl App {
                     }
 
                     self.proxies.sync_client(&mut rx_proxies);
-                    // // proxies selected status thread recv
-                    // if let Ok(value) = rx_proxies.try_recv() {
-                    //     log::trace!("Proxies Groups selected status: {:?}", value);
-                    //     if value.len() == self.proxies_status.group_items.len() {
-                    //         for (i, index) in value.iter().enumerate() {
-                    //             self.proxies_status.group_items[i].1 = *index;
-                    //         }
-                    //     } else {
-                    //         panic!("There is something wrong with group size.");
-                    //     }
-                    // }
-
-                    // // proxies delay info thread recv
-                    // if let Ok(value) = self.proxies_status.delay_mpsc.1.try_recv() {
-                    //     // // The index here maybe different from the index of 'd' press time.
-                    //     // let group_index = self.proxies_status.group_state.selected().unwrap();
-                    //     let (msg, group_index) = value;
-                    //     self.proxies_status.delay[group_index] = msg;
-                    // }
                     self.proxies.update();
 
                     terminal.draw(|frame| crate::app::ui::draw(&mut self, frame))?;
