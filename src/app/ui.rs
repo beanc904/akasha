@@ -1,9 +1,14 @@
-pub mod components;
-pub mod widgets;
-use components::Component;
+mod components;
+mod widgets;
 
-use ratatui::prelude::*;
-use ratatui::widgets::{Block, Borders, Paragraph};
+pub use self::components::{Dashboard, Logs, Proxies, Sidebar};
+
+use self::components::Component;
+
+use ratatui::{
+    prelude::*,
+    widgets::{Block, Borders, Paragraph},
+};
 
 use crate::app::{App, CurrentPage};
 

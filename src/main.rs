@@ -1,10 +1,10 @@
 mod alib;
-pub mod app;
-pub mod pkginfo;
+mod app;
+mod pkginfo;
 
 use std::env;
 
-use crate::alib::*;
+use crate::alib::{cli_main, tui_main};
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {

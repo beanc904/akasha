@@ -115,11 +115,7 @@ impl Proxies {
             }
             Focus::Proxy => {
                 let groups_idx = self.state.0.selected().unwrap();
-                np_switch(
-                    true,
-                    &mut self.state.1,
-                    self.groups[groups_idx].subitems.len(),
-                );
+                np_switch(true, &mut self.state.1, self.groups[groups_idx].subitems.len());
             }
         }
     }
@@ -132,11 +128,7 @@ impl Proxies {
             }
             Focus::Proxy => {
                 let groups_idx = self.state.0.selected().unwrap();
-                np_switch(
-                    false,
-                    &mut self.state.1,
-                    self.groups[groups_idx].subitems.len(),
-                );
+                np_switch(false, &mut self.state.1, self.groups[groups_idx].subitems.len());
             }
         }
     }
@@ -163,10 +155,7 @@ impl Proxies {
     pub fn launch_server(
         &self,
         mihomo: Arc<RwLock<Mihomo>>,
-    ) -> (
-        broadcast::Receiver<Vec<String>>,
-        broadcast::Receiver<Vec<String>>,
-    ) {
+    ) -> (broadcast::Receiver<Vec<String>>, broadcast::Receiver<Vec<String>>) {
         let (tx_proxies, rx_proxies) = broadcast::channel(64);
         let rx_proxies_dash = tx_proxies.subscribe();
 
@@ -248,10 +237,7 @@ impl Component for Proxies {
             .iter()
             .map(|group| {
                 let current_idx = group.current_idx;
-                ListItem::new(format!(
-                    "{}\n({})",
-                    group.name, group.subitems[current_idx].name
-                ))
+                ListItem::new(format!("{}\n({})", group.name, group.subitems[current_idx].name))
             })
             .collect();
         let groups_widget = List::new(groups_items)

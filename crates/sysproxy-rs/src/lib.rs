@@ -51,20 +51,12 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 impl Sysproxy {
     pub fn is_support() -> bool {
-        cfg!(any(
-            target_os = "linux",
-            target_os = "macos",
-            target_os = "windows",
-        ))
+        cfg!(any(target_os = "linux", target_os = "macos", target_os = "windows",))
     }
 }
 
 impl Autoproxy {
     pub fn is_support() -> bool {
-        cfg!(any(
-            target_os = "linux",
-            target_os = "macos",
-            target_os = "windows",
-        ))
+        cfg!(any(target_os = "linux", target_os = "macos", target_os = "windows",))
     }
 }

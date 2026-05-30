@@ -1,26 +1,24 @@
 mod ui;
 
-use std::path::PathBuf;
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 use aka_logger::{AkaLogger, LoggerConfig};
-use akasha::client::mihomo::Mihomo;
+use akasha::{
+    client as ac,
+    client::mihomo::Mihomo,
+    parser::config::{AkashaConfig, MihomoConfig},
+};
 use crossterm::event::{Event, EventStream, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use futures::StreamExt;
 use log::LevelFilter;
 use ratatui::DefaultTerminal;
 use sysproxy::Sysproxy;
-use tokio::sync::{RwLock, mpsc};
-use tokio::time::{Duration, interval};
+use tokio::{
+    sync::{RwLock, mpsc},
+    time::{Duration, interval},
+};
 
-use akasha::client as ac;
-use akasha::parser::config::{AkashaConfig, MihomoConfig};
-
-use crate::app::ui::components::dashboard::Dashboard;
-use crate::app::ui::components::logs::Logs;
-use crate::app::ui::components::proxies::Proxies;
-use crate::app::ui::components::sidebar::Sidebar;
-use crate::pkginfo::PkgInfo;
+use crate::{app::ui::*, pkginfo::PkgInfo};
 
 enum CurrentPage {
     Dashboard,
@@ -136,7 +134,7 @@ impl App {
                     self.proxies.sync_client(&mut rx_proxies);
                     self.proxies.update();
 
-                    terminal.draw(|frame| crate::app::ui::draw(&mut self, frame))?;
+                    terminal.draw(|frame| draw(&mut self, frame))?;
                     // self.handle_crossterm_events().await?;
                 }
                 maybe_event = self.event_stream.next() => {

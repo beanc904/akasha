@@ -174,15 +174,11 @@ fn generate_socket_response(header: String, body: String) -> Result<reqwest::Res
         }
         Ok(httparse::Status::Partial) => {
             log::error!("Partial response, need more data");
-            Err(Error::HttpParseError(
-                "Partial response, need more data".to_string(),
-            ))
+            Err(Error::HttpParseError("Partial response, need more data".to_string()))
         }
         Err(e) => {
             log::error!("Failed to parse response: {e}");
-            Err(Error::HttpParseError(format!(
-                "Failed to parse response: {e}"
-            )))
+            Err(Error::HttpParseError(format!("Failed to parse response: {e}")))
         }
     }
 }
@@ -456,11 +452,7 @@ impl IpcConnectionPool {
                 false
             }
         });
-        log::debug!(
-            "cleanup connections done, before: {}, after: {}",
-            before,
-            connections.len()
-        );
+        log::debug!("cleanup connections done, before: {}, after: {}", before, connections.len());
     }
 
     async fn get_connection<'a>(

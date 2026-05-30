@@ -1,6 +1,7 @@
-use std::env;
-#[allow(unused)]
-use std::path::{Path, PathBuf};
+use std::{
+    env,
+    path::{Path, PathBuf},
+};
 
 const MIHOMO_CONFIG_NAME: &'static str = "config.yaml";
 const MIHOMO_SOCKET_NAME: &'static str = "mihomo.sock";
@@ -12,6 +13,7 @@ pub struct PkgInfo {
     version: &'static str,
     authors: &'static str,
     config_path: Box<Path>,
+    #[allow(unused)]
     cache_path: Box<Path>,
     tmp_path: Box<Path>,
 }
@@ -54,6 +56,7 @@ impl PkgInfo {
         }
     }
 
+    #[allow(unused)]
     pub fn get_app_cachedir(&self) -> Box<Path> {
         self.cache_path.join(self.name).into_boxed_path()
     }

@@ -613,11 +613,7 @@ impl Mihomo {
             // maybe proxy delay is timeout response, try parse it.
             match response.json::<ErrorResponse>().await {
                 Ok(err_res) => {
-                    log::debug!(
-                        "healthcheck node[{}] error: {}",
-                        proxy_name,
-                        err_res.message
-                    );
+                    log::debug!("healthcheck node[{}] error: {}", proxy_name, err_res.message);
                     return Ok(ProxyDelay { delay: 0 });
                 }
                 Err(e) => {

@@ -7,7 +7,7 @@ use ratatui::{
     widgets::{Block, Borders},
 };
 
-use crate::app::ui::{components::Component, widgets::scrollview::ScrollView};
+use crate::app::ui::{components::Component, widgets::ScrollView};
 
 pub struct Logs {
     logstore: Arc<LogStore>,

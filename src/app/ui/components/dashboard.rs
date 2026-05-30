@@ -15,7 +15,7 @@ use tokio::{
     time::interval,
 };
 
-use crate::app::ui::widgets::scrolltext::ScrollText;
+use crate::app::ui::widgets::ScrollText;
 
 // const KB: u64 = 1024;
 const MB: u64 = 1024 * 1024;
@@ -131,11 +131,9 @@ impl Dashboard {
         let err = format!("usage err");
         match &self.subscription_info {
             Some(ss) => match ss.parse_usage() {
-                Some(usage) => format!(
-                    "{} MB / {} MB",
-                    (usage.download + usage.upload) / MB,
-                    usage.total / MB
-                ),
+                Some(usage) => {
+                    format!("{} MB / {} MB", (usage.download + usage.upload) / MB, usage.total / MB)
+                }
                 None => err,
             },
             None => err,
@@ -244,18 +242,12 @@ impl Dashboard {
             Line::from(format!(">>> {} <<<", self.sections[1][0])).bg(Color::DarkGray),
             one_line(self.sections[1][1], selected_txt, label_style),
             // one_line("Delay: ", node_delay, underline_style),
-            Line::from(vec![
-                Span::styled(self.sections[1][2], label_style),
-                node_delay,
-            ]),
+            Line::from(vec![Span::styled(self.sections[1][2], label_style), node_delay]),
         ];
         let networksettings_section = vec![
             Line::from(format!(">>> {} <<<", self.sections[2][0])).bg(Color::DarkGray),
             // one_line(self.sections[2][0], sysproxy_txt, label_style),
-            Line::from(vec![
-                Span::styled(self.sections[2][1], label_style),
-                system_proxy,
-            ]),
+            Line::from(vec![Span::styled(self.sections[2][1], label_style), system_proxy]),
             one_line(self.sections[2][2], "xxx", label_style),
         ];
         let proxymode_section = vec![

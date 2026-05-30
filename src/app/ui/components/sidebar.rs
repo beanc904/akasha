@@ -8,11 +8,9 @@ use akasha::client::mihomo::Mihomo;
 use ratatui::prelude::*;
 use serde_json::Value;
 use sysproxy::Sysproxy;
-use tokio::sync::mpsc::Receiver;
 use tokio::sync::{RwLock, mpsc};
 
-use crate::app::CurrentPage;
-use crate::app::ui::components::Component;
+use crate::app::{CurrentPage, ui::components::Component};
 
 use self::sidebar_logo::SidebarLogo;
 use self::sidebar_monitor::SidebarMonitor;
@@ -59,7 +57,9 @@ impl Sidebar {
         self.tab.tab_switch(index);
     }
 
-    pub fn launch_server(mihomo: Arc<RwLock<Mihomo>>) -> (Receiver<Value>, Receiver<Value>) {
+    pub fn launch_server(
+        mihomo: Arc<RwLock<Mihomo>>,
+    ) -> (mpsc::Receiver<Value>, mpsc::Receiver<Value>) {
         let (tx_traffic, rx_traffic) = mpsc::channel::<Value>(64);
         let (tx_memory, rx_memory) = mpsc::channel::<Value>(64);
         let mihomo_traffic = mihomo.clone();
@@ -71,8 +71,8 @@ impl Sidebar {
 
     pub fn sync_client(
         &mut self,
-        rx_traffic: &mut Receiver<Value>,
-        rx_memory: &mut Receiver<Value>,
+        rx_traffic: &mut mpsc::Receiver<Value>,
+        rx_memory: &mut mpsc::Receiver<Value>,
     ) {
         if let Ok(value) = rx_traffic.try_recv() {
             log::trace!("Traffic try_recv(): {:?}", value);

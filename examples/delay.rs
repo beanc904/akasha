@@ -51,10 +51,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let delay = m
             .delay_proxy_by_name(proxy_name, "https://www.gstatic.com/generate_204", 5000)
             .await;
-        println!(
-            "Single Proxy node name: {} >> Delay is: {:?}",
-            proxy_name, delay
-        );
+        println!("Single Proxy node name: {} >> Delay is: {:?}", proxy_name, delay);
     }
 
     Ok(())
